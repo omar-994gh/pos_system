@@ -78,7 +78,7 @@ $groupId = $isEdit
            value="<?= $isEdit ? htmlspecialchars($item['unit']) : '' ?>">
   </div>
 
-  <button type="submit" class="btn btn-primary">
+  <button type="submit" class="btn btn-primary" data-auth="btn_add_item">
     <?= $isEdit ? 'حفظ التعديلات' : 'إضافة' ?>
   </button>
   <a href="items.php?group_id=<?= $groupId ?>" class="btn btn-secondary">إلغاء</a>

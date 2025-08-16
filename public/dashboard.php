@@ -9,7 +9,7 @@ $stmt = $db->query("SELECT restaurant_name, logo_path, address FROM System_Setti
 $settings = $stmt->fetch(PDO::FETCH_ASSOC);
 
 $restaurantName = $settings['restaurant_name'] ?? 'اسم المطعم';
-$logoPath       = $settings['logo_path']     ?? 'public/images/logo.png';
+$logoPath       = $settings['logo_path']     ?? 'images/logo.png';
 $address        = $settings['address']       ?? 'عنوان المطعم';
 $username       = htmlspecialchars($_SESSION['username']);
 $role           = htmlspecialchars($_SESSION['role']);

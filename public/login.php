@@ -3,16 +3,6 @@ require_once __DIR__ . '/../src/init.php';
 require_once __DIR__ . '/../src/Auth.php';
 
 
-$key = $_COOKIE['license_key'] ?? '';
-$stmt = $db->prepare(
-  "SELECT COUNT(*) AS cnt 
-     FROM Licenses 
-    WHERE license_key = :key AND is_used = 1"
-);
-$stmt->execute([':key'=>$key]);
-if ((int)$stmt->fetch()['cnt'] !== 1) {
-  header('Location: activate.php'); exit;
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');

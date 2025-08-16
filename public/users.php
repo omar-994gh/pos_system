@@ -37,11 +37,9 @@ $users = $userModel->all();
         <td><?= htmlspecialchars($u['created_at']) ?></td>
         <td>
           <a href="user_form.php?id=<?= $u['id'] ?>" class="btn btn-sm btn-primary">تعديل</a>
-          <a href="user_delete.php?id=<?= $u['id'] ?>" 
-             onclick="return confirm('هل أنت متأكد من حذف المستخدم؟');"
-             class="btn btn-sm btn-danger">
-            حذف
-          </a>
+          <form action="user_delete.php?id=<?= $u['id'] ?>" method="post" style="display:inline" onsubmit="return confirm('هل أنت متأكد من حذف المستخدم؟');">
+            <button type="submit" class="btn btn-sm btn-danger" data-auth="btn_delete_item">حذف</button>
+          </form>
         </td>
       </tr>
     <?php endforeach; ?>

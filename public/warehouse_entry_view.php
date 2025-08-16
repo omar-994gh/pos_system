@@ -68,6 +68,7 @@ $items = $model->findItems($id);
         <td class="no-print">
           <a href="?id=<?= $id ?>&delete_item=<?= $it['item_id'] ?>"
              class="btn btn-sm btn-danger"
+             data-auth="btn_delete_item"
              onclick="return confirm('هل تريد حذف هذا البند؟');">
             حذف
           </a>

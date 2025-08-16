@@ -36,9 +36,9 @@ $printers     = $printerModel->all();
         <td><?= htmlspecialchars($p['created_at']) ?></td>
         <td>
           <a href="printer_form.php?id=<?= $p['id'] ?>" class="btn btn-sm btn-primary">تعديل</a>
-          <a href="printer_delete.php?id=<?= $p['id'] ?>"
-             onclick="return confirm('هل تريد حذف هذه الطابعة؟');"
-             class="btn btn-sm btn-danger">حذف</a>
+          <form action="printer_delete.php?id=<?= $p['id'] ?>" method="post" style="display:inline" onsubmit="return confirm('هل تريد حذف هذه الطابعة؟');">
+            <button type="submit" class="btn btn-sm btn-danger" data-auth="btn_delete_item">حذف</button>
+          </form>
         </td>
       </tr>
     <?php endforeach; ?>

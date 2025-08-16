@@ -7,53 +7,32 @@ if (!Auth::isCashier() && !Auth::isAdmin()) {
     header('Location: dashboard.php');
     exit;
 }
-// جلب إعدادات الضريبة والعملة
-$setting  = $db->query("
-    SELECT tax_rate, currency 
-      FROM System_Settings 
-     ORDER BY id DESC LIMIT 1
-")->fetch(PDO::FETCH_ASSOC);
+$setting  = $db->query("SELECT tax_rate, currency, font_size_title, font_size_item, font_size_total FROM System_Settings ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $taxRate  = floatval($setting['tax_rate'] ?? 0);
 $currency = htmlspecialchars($setting['currency'] ?? 'USD');
+$fsTitle = (int)($setting['font_size_title'] ?? 22);
+$fsItem  = (int)($setting['font_size_item'] ?? 16);
+$fsTotal = (int)($setting['font_size_total'] ?? 18);
 ?>
 <?php include 'header.php'; ?>
 
 <style>
-  /* بطاقة بيانات الصنف */
-  #itemCard {
-    display: none;
-    animation: fadeIn 0.4s ease;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px) }
-    to   { opacity: 1; transform: translateY(0) }
-  }
-  .sticky-cart {
-    position: sticky;
-    top: 20px;
-    max-height: calc(100vh - 40px);
-    overflow-y: auto;
-  }
-  .qty-input, .price-input {
-    width: 4rem;
-    display: inline-block;
-  }
+#itemCard { display: none; animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px) } to { opacity: 1; transform: translateY(0) } }
+.sticky-cart { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.qty-input, .price-input { width: 4rem; display: inline-block; }
 </style>
 
 <div class="container-fluid">
-  <!-- صف البحث يحتل العرض الكامل -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="input-group">
         <span class="input-group-text">║▌║█║▌│</span>
-        <input type="text" id="barcodeInput" 
-               class="form-control form-control-lg w-100" 
-               placeholder="أدخل باركود المادة واضغط Enter">
+        <input type="text" id="barcodeInput" class="form-control form-control-lg w-100" placeholder="أدخل باركود المادة واضغط Enter">
       </div>
     </div>
   </div>
 
-  <!-- صف السلة يحتل العرض الكامل تحت البحث -->
   <div class="row">
     <div class="col-12">
       <div class="sticky-cart bg-white p-3 shadow-sm">
@@ -77,7 +56,7 @@ $currency = htmlspecialchars($setting['currency'] ?? 'USD');
           <input type="number" id="discountInput" class="form-control" value="0" min="0">
         </div>
         <h5>الإجمالي: <span id="grandTotal">0.00</span> <?= $currency ?></h5>
-        <button id="checkoutBtn" class="btn btn-success w-100" disabled>
+        <button id="checkoutBtn" class="btn btn-success w-100" data-auth="btn_checkout" disabled>
           <i class="bi bi-check2-circle"></i> إنهاء وبيع
         </button>
       </div>
@@ -92,62 +71,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const cart = [];
   const taxRate = <?= $taxRate ?>;
   const currency = '<?= $currency ?>';
-
-  const barcodeInput   = document.getElementById('barcodeInput');
-  const itemCard       = document.getElementById('itemCard');
-  const itemImage      = document.getElementById('itemImage');
-  const itemName       = document.getElementById('itemName');
-  const itemBarcode    = document.getElementById('itemBarcode');
-  const itemPrice      = document.getElementById('itemPrice');
-  const itemQty        = document.getElementById('itemQty');
-  const addBtn         = document.getElementById('addBtn');
-  const discountInput  = document.getElementById('discountInput');
+  const fsTitle = <?= $fsTitle ?>;
+  const fsItem  = <?= $fsItem ?>;
+  const fsTotal = <?= $fsTotal ?>;
 
   function renderCart() {
     const tbody = document.querySelector('#cartTable tbody');
     tbody.innerHTML = '';
     let subTotal = 0;
-
     cart.forEach((it, idx) => {
       const lineTotal = it.quantity * it.unit_price;
       subTotal += lineTotal;
-
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${it.name}</td>
-        <td>
-          <input type="number" class="form-control form-control qty-input w-100" 
-                 data-idx="${idx}" min="1" value="${it.quantity}">
-        </td>
-        <td> 
-          <input type="number" class="form-control form-control price-input w-100" 
-                 data-idx="${idx}" step="0.01" value="${it.unit_price}">
-        </td>
+        <td><input type="number" class="form-control form-control qty-input w-100" data-idx="${idx}" min="1" value="${it.quantity}"></td>
+        <td><input type="number" class="form-control form-control price-input w-100" data-idx="${idx}" step="0.01" value="${it.unit_price}"></td>
         <td><span class="item-total">${lineTotal}</span></td>
-        <td>
-          <button class="btn btn-sm btn-danger remove" data-idx="${idx}">×</button>
-        </td>
-      `;
+        <td><button class="btn btn-sm btn-danger remove" data-idx="${idx}">×</button></td>`;
       tbody.appendChild(tr);
-
-      // حدث تعديل الكمية
-      tr.querySelector('.qty-input').addEventListener('input', e => {
-        const i = +e.target.dataset.idx;
-        cart[i].quantity = parseFloat(e.target.value) || 1;
-        // renderCart();
-      });
-      // حدث تعديل السعر
-      tr.querySelector('.price-input').addEventListener('input', e => {
-        const i = +e.target.dataset.idx;
-        cart[i].unit_price = parseFloat(e.target.value) || 0;
-        // renderCart();
-      });
+      tr.querySelector('.qty-input').addEventListener('input', e => { const i = +e.target.dataset.idx; cart[i].quantity = parseFloat(e.target.value) || 1; });
+      tr.querySelector('.price-input').addEventListener('input', e => { const i = +e.target.dataset.idx; cart[i].unit_price = parseFloat(e.target.value) || 0; });
     });
 
-    const discount = parseFloat(discountInput.value) || 0;
+    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
     const taxAmount = subTotal * taxRate / 100;
     const grandTotal = subTotal + taxAmount - discount;
-
     document.getElementById('subTotal').textContent   = subTotal.toFixed(2);
     document.getElementById('taxAmount').textContent  = taxAmount.toFixed(2);
     document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
@@ -163,31 +112,17 @@ document.addEventListener('DOMContentLoaded', () => {
       subTotal += lineTot;
       tr.querySelector('.item-total').textContent = lineTot.toFixed(2);
     });
-    const discount = parseFloat(discountInput.value) || 0;
+    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
     const taxAmount = subTotal * taxRate / 100;
     document.getElementById('subTotal').textContent   = subTotal.toFixed(2);
     document.getElementById('taxAmount').textContent  = taxAmount.toFixed(2);
     document.getElementById('grandTotal').textContent = (subTotal + taxAmount - discount).toFixed(2);
   }
 
-  // تفويض للـ quantity و price inputs
   document.querySelector('#cartTable tbody').addEventListener('input', e => {
-    if (e.target.matches('.qty-input') || e.target.matches('.price-input')) {
-      const idx = +e.target.dataset.idx;
-      // حدّثي البيانات في المصفوفة
-      if (e.target.matches('.qty-input')) {
-        cart[idx].quantity = parseFloat(e.target.value) || 1;
-      } else {
-        cart[idx].unit_price = parseFloat(e.target.value) || 0;
-      }
-      // أعدي حساب المجاميع فقط
-      recalcTotals();
-    }
+    if (e.target.matches('.qty-input') || e.target.matches('.price-input')) { recalcTotals(); }
   });
 
-
-
-  // إزالة عنصر
   document.querySelector('#cartTable').addEventListener('click', e => {
     if (e.target.classList.contains('remove')) {
       const idx = +e.target.dataset.idx;
@@ -196,93 +131,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // بحث بالباركود عند Enter
-  barcodeInput.addEventListener('keydown', async e => {
-    if (e.key !== 'Enter' || !barcodeInput.value.trim()) return;
+  document.getElementById('barcodeInput').addEventListener('keydown', async e => {
+    if (e.key !== 'Enter' || !e.target.value.trim()) return;
     e.preventDefault();
-    const code = encodeURIComponent(barcodeInput.value.trim());
-    const res  = await fetch(`items_by_barcode.php?barcode=${code}`);
-    const it   = await res.json();
-    if (!it.id) {
-      alert('لم أجد مادة بهذا الباركود');
-      barcodeInput.select();
-      return;
-    }
-    // إضافة مباشر للسلة
+    const code = encodeURIComponent(e.target.value.trim());
+    const it   = await fetch(`items_by_barcode.php?barcode=${code}`).then(r=>r.json());
+    if (!it.id) { alert('لم أجد مادة بهذا الباركود'); e.target.select(); return; }
     const existing = cart.find(i => i.item_id == it.id);
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      cart.push({
-        item_id: it.id,
-        name: it.name_ar + (it.name_en ? ` / ${it.name_en}` : ''),
-        unit_price: parseFloat(it.price),
-        quantity: 1
-      });
-    }
+    if (existing) existing.quantity += 1;
+    else cart.push({ item_id: it.id, name: it.name_ar + (it.name_en ? ` / ${it.name_en}` : ''), unit_price: parseFloat(it.price), quantity: 1, group_id: it.group_id });
     renderCart();
-    barcodeInput.value = '';
-    //barcodeInput.focus();
+    e.target.value = '';
   });
 
-  // إضافة من البطاقة (اختياري)
-  addBtn.addEventListener('click', () => {
-    const id = addBtn.dataset.id;
-    const qty = parseFloat(itemQty.value) || 1;
-    const existing = cart.find(i => i.item_id == id);
-    if (existing) {
-      existing.quantity += qty;
-    } else {
-      cart.push({
-        item_id: id,
-        name: itemName.textContent,
-        unit_price: parseFloat(addBtn.dataset.price),
-        quantity: qty
-      });
-    }
-    renderCart();
-    barcodeInput.value = '';
-    itemCard.style.display = 'none';
-    //barcodeInput.focus();
-  });
+  document.getElementById('discountInput').addEventListener('input', renderCart);
 
-  // إعادة حساب عند تغيير الخصم
-  discountInput.addEventListener('input', renderCart);
-
-  // إنهاء البيع
   document.getElementById('checkoutBtn').addEventListener('click', async () => {
     if (!cart.length) return alert('السلة فارغة');
     const subTotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
     const taxAmount = subTotal * taxRate / 100;
-    const discount = parseFloat(discountInput.value) || 0;
+    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
     const total = subTotal + taxAmount - discount;
 
     const resp = await fetch('pos_handler.php', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ items: cart, total })
+      method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ items: cart, total })
     });
     const result = await resp.json();
-    if (!result.success) {
-      return alert('فشل في إنشاء الطلب: ' + (result.error||''));
+    if (!result.success) return alert('فشل في إنشاء الطلب: ' + (result.error||''));
+
+    // Group items by group_id and build per-printer images
+    const itemsByGroup = {};
+    cart.forEach(it => { const gid = parseInt(it.group_id || 0); if (!itemsByGroup[gid]) itemsByGroup[gid] = []; itemsByGroup[gid].push(it); });
+    const groupPrinters = result.groupPrinters || {};
+    const unassignedPrinters = result.unassignedPrinters || [];
+
+    const images = [];
+    for (const [gidStr, items] of Object.entries(itemsByGroup)) {
+      const gid = parseInt(gidStr);
+      const printerId = parseInt(groupPrinters[gid] || 0);
+      const img = await generateInvoiceImage(items, subTotal, taxAmount, total, result.orderSeq, fsTitle, fsItem, fsTotal);
+      images.push({ image: img, printer_ids: printerId ? [printerId] : [] });
     }
-    const { orderSeq, orderId } = result;
-    const imageData = await generateInvoiceImage(cart, subTotal, taxAmount, total, orderSeq, discount);
-    const printResp = await fetch('../src/print.php', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ image:imageData, order_id:orderId })
-    });
+    if (unassignedPrinters.length) {
+      const fullImg = await generateInvoiceImage(cart, subTotal, taxAmount, total, result.orderSeq, fsTitle, fsItem, fsTotal);
+      images.push({ image: fullImg, printer_ids: unassignedPrinters });
+    }
+
+    const printResp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ images, order_id: result.orderId }) });
     const printResult = await printResp.json();
-    if (printResult.success) {
-      alert('تم البيع وطباعة الفاتورة بنجاح');
-      cart.length = 0;
-      renderCart();
-    } else {
-      alert('تم البيع ولكن فشل الطباعة: '+(printResult.error||''));
-    }
+    if (printResult.success) { alert('تم البيع وطباعة الفاتورة بنجاح'); cart.length = 0; renderCart(); }
+    else { alert('تم البيع ولكن فشل الطباعة: '+(printResult.error||'')); }
   });
 
-  // حافظ على التركيز
-  // //barcodeInput.focus();
+  async function generateInvoiceImage(items, subTotal, taxAmount, total, orderSeq, fsTitle, fsItem, fsTotal) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const settings = await fetch('get_print_settings.php').then(r => r.json());
+    const cfg = {}; settings.forEach(s => cfg[s.key] = s);
+    const widthMm = parseInt(cfg['print_width_mm']?.value) || 80; const pxPerMm = 7; const width = widthMm * pxPerMm;
+
+    const infoLines = [];
+    if (cfg['field_restaurant_name']?.value == 1) infoLines.push(cfg['restaurant_name']?.value || '');
+    if (cfg['field_username']?.value == 1) infoLines.push('المستخدم: ' + '<?= htmlspecialchars($_SESSION["username"]) ?>');
+    if (cfg['field_tax_number']?.value == 1) infoLines.push('الرقم الضريبي: ' + (cfg['tax_number']?.value || ''));
+    infoLines.push(cfg['address']?.value || '');
+
+    const rowH=45, headerH=100, infoH=infoLines.length*25, tableH=(items.length+1)*rowH, footerH=80, extra=270;
+    canvas.width = width; canvas.height = headerH + infoH + tableH + footerH + extra;
+    ctx.fillStyle='white'; ctx.fillRect(0, 0, width, canvas.height);
+
+    let y = 10;
+    if (cfg['field_restaurant_logo']?.value == 1 && cfg['logo_path']?.value) {
+      const logo = new Image(); logo.src='images/logo.png'; await new Promise(r => logo.onload = r);
+      const logoW = 200; const logoH = (logo.height * logoW) / logo.width; ctx.drawImage(logo, (width - logoW) / 2, y, logoW, logoH); y += logoH + 20;
+    }
+
+    ctx.fillStyle='black'; ctx.textAlign='center'; ctx.font = `${Math.max(16, fsTitle)}px Arial`; infoLines.forEach(line => { ctx.fillText(line, width / 2, y); y += 25; });
+    ctx.font = `bold ${Math.max(16, fsTitle)}px Arial`; ctx.textAlign='right'; ctx.fillStyle='#333'; ctx.fillText(`رقم الطلب: ${orderSeq}`, width - 20, y + 40); y += 60;
+
+    const cols = ['اسم', 'كمية', 'سعر إفرادي', 'سعر إجمالي']; const colW = [width*0.4, width*0.2, width*0.2, width*0.2];
+    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.textAlign='center'; let x = width; cols.forEach((title, i) => { x -= colW[i]; ctx.strokeRect(x + 4, y, colW[i] - 8, rowH); ctx.fillText(title, x + colW[i] / 2, y + rowH / 2); }); y += rowH;
+
+    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`;
+    items.forEach(item => { x = width; const nameLines = [item.name]; if (item.name_en) nameLines.push(item.name_en); const qty=item.quantity, price=item.unit_price, tot=(qty*price); const cells=[nameLines.join('\n'), qty, price, tot]; cells.forEach((txt, i) => { x -= colW[i]; ctx.strokeRect(x + 4, y, colW[i]-8, rowH); if (i===0 && String(txt).includes('\n')) { String(txt).split('\n').forEach((ln, idx)=>{ ctx.fillText(ln, x + colW[i]/2, y + 18 + idx*18); }); } else { ctx.fillText(txt, x + colW[i]/2, y + rowH/2); } }); y += rowH; });
+
+    y += 20; ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(width-20, y); ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.stroke(); y += 30;
+
+    ctx.font = `bold ${Math.max(12, fsTotal)}px Arial`; ctx.textAlign='right';
+    ctx.fillText(`المجموع: ${subTotal}`, width - 4, y + 20);
+    ctx.fillText(`الضريبة: ${taxAmount}`, width - 4, y + 45);
+    ctx.fillText(`الإجمالي: ${total}`, width - 4, y + 70);
+
+    return canvas.toDataURL('image/png');
+  }
 });
 </script>

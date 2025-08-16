@@ -93,6 +93,7 @@ $entries = $model->all($filters);
           </a>
           <a href="?delete_invoice=<?= $e['id'] ?>"
              class="btn btn-sm btn-danger"
+             data-auth="btn_delete_item"
              onclick="return confirm('هل أنت متأكد من حذف الفاتورة وكل بنودها؟');">
             حذف
           </a>

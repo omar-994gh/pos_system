@@ -8,11 +8,11 @@ class Item
         $this->db = $db;
     }
 
-    /** جلب كل الأصناف لمجموعة معينة */
+    /** Get all items in a specific group */
     public function allByGroup(int $groupId): array
     {
         $stmt = $this->db->prepare('
-            SELECT i.*, g.name AS group_name
+            SELECT i.*, g.name AS group_name, i.group_id
             FROM Items i
             JOIN Groups g ON i.group_id = g.id
             WHERE g.id = :gid
@@ -22,7 +22,7 @@ class Item
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** جلب صنف واحد */
+    /** Find item by id */
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM Items WHERE id = :id');
@@ -31,7 +31,7 @@ class Item
         return $row ?: null;
     }
 
-    /** إضافة صنف */
+    /** Create item */
     public function create(array $data): bool
     {
         $stmt = $this->db->prepare('
@@ -49,7 +49,7 @@ class Item
         ]);
     }
 
-    /** تحديث صنف */
+    /** Update item */
     public function update(int $id, array $data): bool
     {
         $stmt = $this->db->prepare('
@@ -75,7 +75,7 @@ class Item
         ]);
     }
 
-    /** حذف صنف */
+    /** Delete item */
     public function delete(int $id): bool
     {
         $stmt = $this->db->prepare('DELETE FROM Items WHERE id = :id');

@@ -3,15 +3,11 @@
 require_once __DIR__ . '/../src/init.php';
 require_once __DIR__ . '/../src/Auth.php';
 Auth::requireLogin();
-if (!Auth::isAdmin() && !Auth::isCashier()) {
-    header('Location: dashboard.php');
-    exit;
-}
-// استعلام الفلاتر
+if (!Auth::isAdmin() && !Auth::isCashier()) { header('Location: dashboard.php'); exit; }
+
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
 
-// جلب الفواتير ضمن المدى
 $stmt = $db->prepare("
     SELECT
     o.created_at   AS sale_date,
@@ -32,60 +28,32 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php include 'header.php'; ?>
 
 <style>
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    background: url('images/logo.png') center center no-repeat;
-    background-size: 40%;
-    opacity: 0.1;           /* اضبط الشفافية هنا (مثلاً 0.05–0.2) */
-    z-index: -1;            /* في الخلفية تمامًا */
-    pointer-events: none;   /* لا تمنع أي تفاعلات على الصفحة */
-  }
-  .on-print {
-    display: none;
-  }
-  @media print {
-    .no-print { display: none !important; }
-    /* body::before {
-        opacity: 0.1;
-        display: block;
-    } */
-    .on-print { display: block !important; }
-  }
+  body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; background: url('images/logo.png') center center no-repeat; background-size: 40%; opacity: 0.1; z-index: -1; pointer-events: none; }
+  .on-print { display: none; }
+  @media print { .no-print { display: none !important; } .on-print { display: block !important; } }
 </style>
   <div style="text-align: center; margin-bottom: 30px;">
     <h3 class="on-print">فاتورة مبيعات</h3>
   </div>
   <div class="d-flex justify-content-between align-items-center no-print mb-3">
     <h3>سجل المبيعات</h3>
-    <button onclick="window.print()" class="btn btn-outline-primary">
-      🖨 طباعة
-    </button>
+    <button onclick="window.print()" class="btn btn-outline-primary">🖨 طباعة</button>
   </div>
 
   <form method="get" class="row g-2 no-print mb-4">
     <div class="col-auto">
       <label>من</label>
-      <input type="date" name="date_from" class="form-control"
-             value="<?= htmlspecialchars($dateFrom) ?>">
+      <input type="date" name="date_from" class="form-control" value="<?= htmlspecialchars($dateFrom) ?>">
     </div>
     <div class="col-auto">
       <label>إلى</label>
-      <input type="date" name="date_to" class="form-control"
-             value="<?= htmlspecialchars($dateTo) ?>">
+      <input type="date" name="date_to" class="form-control" value="<?= htmlspecialchars($dateTo) ?>">
     </div>
     <div class="col-auto align-self-end">
       <button class="btn btn-primary">فلترة</button>
     </div>
   </form>
-  <div class="alert alert-success on-print">
-    تمت الطباعة بواسطة نظام إدارة نقاط المبيع POS
-  </div>
+  <div class="alert alert-success on-print">تمت الطباعة بواسطة نظام إدارة نقاط المبيع POS</div>
   <table class="table table-striped">
     <thead>
       <tr>
@@ -98,12 +66,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
       </tr>
     </thead>
     <tbody>
-      <?php
-        $grandTotal = 0;
-        foreach ($orders as $r):
-          $grandTotal += $r['subtotal'];
-          
-      ?>
+      <?php $grandTotal = 0; foreach ($orders as $r): $grandTotal += $r['subtotal']; ?>
       <tr>
         <td><?= $r['sale_date'] ?></td>
         <td><?= $r['invoice_no'] ?></td>
@@ -124,7 +87,6 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
   <div id="details" class="mt-4"></div>
 </main>
-
 <script>
 async function loadDetails(orderId) {
   const resp = await fetch(`order_details.php?id=${orderId}`);

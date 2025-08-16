@@ -5,10 +5,7 @@ require_once __DIR__ . '/../src/Auth.php';
 require_once __DIR__ . '/../src/Item.php';
 
 Auth::requireLogin();
-if (!Auth::isAdmin()) {
-    header('Location: dashboard.php');
-    exit;
-}
+if (!Auth::isAdmin()) { header('Location: dashboard.php'); exit; }
 
 $model = new Item($db);
 
@@ -23,13 +20,26 @@ $data     = [
     'unit'     => trim($_POST['unit'] ?? ''),
 ];
 
-if ($id) {
-    $model->update((int)$id, $data);
-    $gid = $data['group_id'];
-} else {
-    $model->create($data);
-    $gid = $data['group_id'];
-}
+$acceptsJson = (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']));
 
-header("Location: items.php?group_id=$gid");
-exit;
+try {
+    if ($id) { $ok = $model->update((int)$id, $data); }
+    else { $ok = $model->create($data); }
+
+    if ($acceptsJson) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => (bool)$ok]);
+        exit;
+    }
+
+    $gid = $data['group_id'];
+    header("Location: items.php?group_id=$gid");
+    exit;
+} catch (Exception $e) {
+    if ($acceptsJson) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit;
+    }
+    die('فشل حفظ الصنف');
+}

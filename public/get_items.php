@@ -22,4 +22,6 @@ $items = $itemModel->allByGroup($groupId);
 
 // إرجاع JSON
 header('Content-Type: application/json; charset=utf-8');
+// Ensure group_id present
+$items = array_map(function($r){ if (!isset($r['group_id'])) { /* fallback: nothing */ } return $r; }, $items);
 echo json_encode($items);

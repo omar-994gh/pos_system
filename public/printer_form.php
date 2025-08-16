@@ -1,13 +1,11 @@
 <?php
+// Manage creation and update of receipt printers (network or USB)
 require_once __DIR__ . '/../src/init.php';
 require_once __DIR__ . '/../src/Auth.php';
 require_once __DIR__ . '/../src/Printer.php';
 
 Auth::requireLogin();
-if (!Auth::isAdmin()) {
-    header('Location: dashboard.php');
-    exit;
-}
+if (!Auth::isAdmin()) { header('Location: dashboard.php'); exit; }
 
 $printerModel = new Printer($db);
 $isEdit       = isset($_GET['id']);
@@ -23,26 +21,24 @@ $printer      = $isEdit ? $printerModel->find((int)$_GET['id']) : null;
 
   <div class="mb-3">
     <label>اسم الطابعة</label>
-    <input type="text" name="name" class="form-control" required
-           value="<?= $isEdit ? htmlspecialchars($printer['name']) : '' ?>">
+    <input type="text" name="name" class="form-control" required value="<?= $isEdit ? htmlspecialchars($printer['name']) : '' ?>">
   </div>
 
   <div class="mb-3">
     <label>العنوان (IP أو USB path)</label>
-    <input type="text" name="address" class="form-control" required
-           value="<?= $isEdit ? htmlspecialchars($printer['address']) : '' ?>">
+    <input type="text" name="address" class="form-control" required value="<?= $isEdit ? htmlspecialchars($printer['address']) : '' ?>">
   </div>
   
   <label>النوع</label>
-        <select name="printer_type" class="form-control" required>
-          <option value="wifi">شبكة</option>
-          <option value="usb">كبل USB</option>
-        </select>
+  <select name="printer_type" class="form-control" required>
+    <option value="wifi" <?= $isEdit && $printer['type']==='wifi'?'selected':'' ?>>شبكة</option>
+    <option value="usb"  <?= $isEdit && $printer['type']==='usb' ?'selected':'' ?>>كبل USB</option>
+  </select>
 
-  <button type="submit" class="btn btn-primary">
+  <button type="submit" class="btn btn-primary mt-3">
     <?= $isEdit ? 'حفظ التعديلات' : 'إضافة' ?>
   </button>
-  <a href="printers.php" class="btn btn-secondary">إلغاء</a>
+  <a href="printers.php" class="btn btn-secondary mt-3">إلغاء</a>
 </form>
 
 </main>

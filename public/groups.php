@@ -37,11 +37,9 @@ $groups   = $groupModel->all();
         <td><?= htmlspecialchars($g['printer_name'] ?? '—') ?></td>
         <td>
           <a href="group_form.php?id=<?= $g['id'] ?>" class="btn btn-sm btn-primary">تعديل</a>
-          <a href="group_delete.php?id=<?= $g['id'] ?>" 
-             onclick="return confirm('هل تريد حذف هذه المجموعة؟');" 
-             class="btn btn-sm btn-danger">
-             حذف
-          </a>
+          <form action="group_delete.php?id=<?= $g['id'] ?>" method="post" style="display:inline" onsubmit="return confirm('هل تريد حذف هذه المجموعة؟');">
+            <button type="submit" class="btn btn-sm btn-danger" data-auth="btn_delete_item">حذف</button>
+          </form>
         </td>
       </tr>
     <?php endforeach; ?>

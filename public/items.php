@@ -69,11 +69,10 @@ $items = $selectedGroupId ? $itemModel->allByGroup($selectedGroupId) : [];
               <td><?= htmlspecialchars($i['stock']) ?></td>
               <td><?= htmlspecialchars($i['unit']) ?></td>
               <td>
-                <a href="item_form.php?id=<?= $i['id'] ?>&group_id=<?= $selectedGroupId ?>"
-                   class="btn btn-sm btn-primary">تعديل</a>
-                <a href="item_delete.php?id=<?= $i['id'] ?>&group_id=<?= $selectedGroupId ?>"
-                   onclick="return confirm('هل تريد حذف هذا الصنف؟');"
-                   class="btn btn-sm btn-danger">حذف</a>
+                <a href="item_form.php?id=<?= $i['id'] ?>&group_id=<?= $selectedGroupId ?>" class="btn btn-sm btn-primary">تعديل</a>
+                <form action="item_delete.php?id=<?= $i['id'] ?>&group_id=<?= $selectedGroupId ?>" method="post" style="display:inline" onsubmit="return confirm('هل تريد حذف هذا الصنف؟');">
+                  <button type="submit" class="btn btn-sm btn-danger" data-auth="btn_delete_item">حذف</button>
+                </form>
               </td>
             </tr>
           <?php endforeach; ?>

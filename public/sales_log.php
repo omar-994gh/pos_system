@@ -1,14 +1,10 @@
 <?php
-// public/sales_log.php
 require_once __DIR__ . '/../src/init.php';
 require_once __DIR__ . '/../src/Auth.php';
 require_once __DIR__ . '/../src/SalesLog.php';
 
 Auth::requireLogin();
-if (!Auth::isAdmin()) {
-    header('Location: dashboard.php');
-    exit;
-}
+if (!Auth::isAdmin()) { header('Location: dashboard.php'); exit; }
 
 $from = $_GET['date_from'] ?? null;
 $to   = $_GET['date_to']   ?? null;
@@ -22,7 +18,6 @@ $details = $model->details($from, $to);
 <main class="container mt-4">
   <h2>سجل المبيعات</h2>
   <div class="d-flex justify-content-between">
-    <!-- فلترة حسب التاريخ -->
     <form class="row g-2 mb-4">
       <div class="col-auto">
         <input type="date" name="date_from" class="form-control" value="<?= htmlspecialchars($from) ?>" placeholder="من">

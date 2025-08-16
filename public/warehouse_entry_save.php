@@ -1,18 +1,12 @@
 <?php
-// public/warehouse_entry_save.php
-
 require_once __DIR__ . '/../src/init.php';
 require_once __DIR__ . '/../src/Auth.php';
 require_once __DIR__ . '/../src/WarehouseInvoice.php';
 require_once __DIR__ . '/../src/WarehouseInvoiceItem.php';
 
 Auth::requireLogin();
-if (!Auth::isAdmin()) {
-    header('Location: dashboard.php');
-    exit;
-}
+if (!Auth::isAdmin()) { header('Location: dashboard.php'); exit; }
 
-// 1. احفظ الرأسية في Warehouse_Invoices
 $invModel = new WarehouseInvoice($db);
 $invoiceId = $invModel->create([
     'warehouse_id' => (int)$_POST['warehouse_id'],
@@ -21,11 +15,8 @@ $invoiceId = $invModel->create([
     'entry_type'   => $_POST['entry_type'],
 ]);
 
-if (!$invoiceId) {
-    die('❌ فشل عند حفظ الرأسية.');
-}
+if (!$invoiceId) { die('❌ فشل عند حفظ الرأسية.'); }
 
-// 2. احفظ بنود الفاتورة في Warehouse_Invoice_Items
 $itemModel = new WarehouseInvoiceItem($db);
 $rows = count($_POST['item_id'] ?? []);
 for ($i = 0; $i < $rows; $i++) {
@@ -38,11 +29,8 @@ for ($i = 0; $i < $rows; $i++) {
         'sale_price'  => floatval($_POST['sale_price'][$i] ?? 0),
         'unit'        => trim($_POST['unit'][$i]),
     ];
-    if (! $itemModel->create($data)) {
-        die("❌ فشل عند حفظ البند رقم " . ($i+1));
-    }
+    if (!$itemModel->create($data)) { die("❌ فشل عند حفظ البند رقم " . ($i+1)); }
 }
 
-// 3. إعادة التوجيه بعد النجاح
 header('Location: warehouse_entries.php');
 exit;

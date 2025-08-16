@@ -8,11 +8,11 @@ class Group
         $this->db = $db;
     }
 
-    /** جلب كل المجموعات */
+    /** Retrieve all groups with optional attached printer name */
     public function all(): array
     {
         $stmt = $this->db->query('
-            SELECT g.id, g.name, p.name AS printer_name
+            SELECT g.id, g.name, g.printer_id, p.name AS printer_name
             FROM Groups g
             LEFT JOIN Printers p ON g.printer_id = p.id
             ORDER BY g.name
@@ -20,7 +20,7 @@ class Group
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** جلب مجموعة واحدة */
+    /** Retrieve a group by id */
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM Groups WHERE id = :id');
@@ -29,7 +29,7 @@ class Group
         return $row ?: null;
     }
 
-    /** إنشاء مجموعة جديدة */
+    /** Create a new group */
     public function create(string $name, ?int $printerId): bool
     {
         $stmt = $this->db->prepare(
@@ -41,7 +41,7 @@ class Group
         ]);
     }
 
-    /** تعديل مجموعة */
+    /** Update a group */
     public function update(int $id, string $name, ?int $printerId): bool
     {
         $stmt = $this->db->prepare(
@@ -54,7 +54,7 @@ class Group
         ]);
     }
 
-    /** حذف مجموعة */
+    /** Delete a group */
     public function delete(int $id): bool
     {
         $stmt = $this->db->prepare('DELETE FROM Groups WHERE id = :id');

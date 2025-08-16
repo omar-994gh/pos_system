@@ -6,12 +6,20 @@ require_once __DIR__ . '/../src/Item.php';
 Auth::requireLogin();
 
 $itemModel = new Item($db);
-$items = $itemModel->allWithStockAndGroup(); // نحتاج دالة تشمل اسم المجموعة
+$items = $itemModel->allWithStockAndGroup();
 ?>
 <?php include 'header.php'; ?>
 
 <main class="container py-4">
-  <h2 class="mb-4 text-center">تقرير المخزون</h2>
+  <div class="d-flex justify-content-between align-items-end mb-3">
+    <h2 class="mb-0">تقرير المخزون</h2>
+    <div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="sf_group" checked><label class="form-check-label" for="sf_group">المجموعة</label></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="sf_price" checked><label class="form-check-label" for="sf_price">السعر</label></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="sf_net" checked><label class="form-check-label" for="sf_net">السعر الإجمالي</label></div>
+      <button id="printStock" class="btn btn-outline-primary mt-2">طباعة كإيصال</button>
+    </div>
+  </div>
 
   <div class="row g-3 mb-3 align-items-end">
     <div class="col-md-4">
@@ -19,9 +27,7 @@ $items = $itemModel->allWithStockAndGroup(); // نحتاج دالة تشمل ا�
       <select id="filterItem" class="form-select">
         <option value="all">– كل المواد –</option>
         <?php foreach ($items as $item): ?>
-          <option value="<?= $item['name_ar'] ?>">
-            <?= htmlspecialchars($item['name_ar']) ?>
-          </option>
+          <option value="<?= $item['name_ar'] ?>"><?= htmlspecialchars($item['name_ar']) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
@@ -30,9 +36,7 @@ $items = $itemModel->allWithStockAndGroup(); // نحتاج دالة تشمل ا�
       <input type="text" id="searchInput" class="form-control" placeholder="أدخل اسم المادة...">
     </div>
     <div class="col-md-4 text-end">
-      <button class="btn btn-primary mt-3" onclick="printReport()">
-        🖨️ طباعة التقرير
-      </button>
+      <button class="btn btn-primary mt-3" onclick="printReport()">🖨️ طباعة التقرير</button>
     </div>
   </div>
 
@@ -45,16 +49,20 @@ $items = $itemModel->allWithStockAndGroup(); // نحتاج دالة تشمل ا�
           <th>المجموعة</th>
           <th>الكمية المتوفرة</th>
           <th>الوحدة</th>
+          <th>السعر</th>
+          <th>السعر الإجمالي</th>
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($items as $it): ?>
+        <?php foreach ($items as $it): $net = (float)$it['stock'] * (float)($it['price'] ?? 0); ?>
           <tr data-name="<?= strtolower($it['name_ar']) ?>">
             <td><?= htmlspecialchars($it['name_ar']) ?></td>
             <td><?= htmlspecialchars($it['name_en']) ?></td>
             <td><?= htmlspecialchars($it['group_name']) ?></td>
             <td><?= $it['stock'] ?></td>
             <td><?= htmlspecialchars($it['unit']) ?></td>
+            <td><?= number_format((float)($it['price'] ?? 0), 2) ?></td>
+            <td><?= number_format($net, 2) ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
@@ -71,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterRows = () => {
     const selected = filterSelect.value.toLowerCase();
     const keyword = searchInput.value.toLowerCase();
-
     rows.forEach(row => {
       const name = row.dataset.name;
       const matchesFilter = (selected === 'all' || name.includes(selected));
@@ -92,12 +99,6 @@ function printReport() {
       <head>
         <title>تقرير المخزون</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-        <style>
-          body { direction: rtl; text-align: center; padding: 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #000; padding: 10px; }
-          th { background-color: #eee; }
-        </style>
       </head>
       <body>
         <h2>تقرير المواد في المخزون</h2>
@@ -107,5 +108,38 @@ function printReport() {
     </html>
   `);
   printWindow.document.close();
+}
+
+document.getElementById('printStock').addEventListener('click', async () => {
+  const wantGroup = document.getElementById('sf_group').checked;
+  const wantPrice = document.getElementById('sf_price').checked;
+  const wantNet   = document.getElementById('sf_net').checked;
+
+  const tableRows = Array.from(document.querySelectorAll('#stockTable tbody tr')).filter(r => r.style.display !== 'none');
+  const rows = tableRows.map(tr => ({
+    name: tr.children[0].innerText,
+    en: tr.children[1].innerText,
+    group: tr.children[2].innerText,
+    qty: tr.children[3].innerText,
+    unit: tr.children[4].innerText,
+    price: tr.children[5].innerText,
+    net: tr.children[6].innerText,
+  }));
+
+  const payload = await buildStockImage({ rows, wantGroup, wantPrice, wantNet });
+  const resp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  const data = await resp.json();
+  if (data.success && typeof showToast==='function') showToast('تم إرسال التقرير للطباعة');
+});
+
+async function buildStockImage(opts) {
+  const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+  const width = 560; canvas.width = width; canvas.height = 1400; let y = 24;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,width,canvas.height); ctx.fillStyle='#000'; ctx.textAlign='center'; ctx.font='bold 20px Arial';
+  ctx.fillText('تقرير المخزون', width/2, y); y+=30; ctx.textAlign='left'; ctx.font='14px Arial';
+  const headers = ['اسم','إنكليزي']; if (opts.wantGroup) headers.push('مجموعة'); headers.push('كمية','وحدة'); if (opts.wantPrice) headers.push('سعر'); if (opts.wantNet) headers.push('إجمالي');
+  ctx.font='bold 14px Arial'; ctx.fillText(headers.join(' | '), 10, y); y+=22; ctx.font='14px Arial';
+  opts.rows.forEach(r => { const cols=[r.name,r.en]; if (opts.wantGroup) cols.push(r.group); cols.push(r.qty,r.unit); if (opts.wantPrice) cols.push(r.price); if (opts.wantNet) cols.push(r.net); ctx.fillText(cols.join(' | '), 10, y); y+=18; });
+  return { images:[{ image: canvas.toDataURL('image/png') }] };
 }
 </script>

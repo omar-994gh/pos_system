@@ -75,28 +75,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const fsItem  = <?= $fsItem ?>;
   const fsTotal = <?= $fsTotal ?>;
 
+  function toastOk(msg) { if (typeof showToast === 'function') showToast(msg, 2500); }
+  function toastErr(msg) { if (typeof showToast === 'function') showToast(msg, 3500); }
+
   function renderCart() {
     const tbody = document.querySelector('#cartTable tbody');
     tbody.innerHTML = '';
     let subTotal = 0;
+
     cart.forEach((it, idx) => {
       const lineTotal = it.quantity * it.unit_price;
       subTotal += lineTotal;
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${it.name}</td>
-        <td><input type="number" class="form-control form-control qty-input w-100" data-idx="${idx}" min="1" value="${it.quantity}"></td>
-        <td><input type="number" class="form-control form-control price-input w-100" data-idx="${idx}" step="0.01" value="${it.unit_price}"></td>
-        <td><span class="item-total">${lineTotal}</span></td>
-        <td><button class="btn btn-sm btn-danger remove" data-idx="${idx}">×</button></td>`;
+        <td><input type=\"number\" class=\"form-control form-control qty-input w-100\" data-idx=\"${idx}\" min=\"1\" value=\"${it.quantity}\"></td>
+        <td><input type=\"number\" class=\"form-control form-control price-input w-100\" data-idx=\"${idx}\" step=\"0.01\" value=\"${it.unit_price}\" data-auth=\"input_edit_price\"></td>
+        <td><span class=\"item-total\">${lineTotal.toFixed(2)}</span></td>
+        <td><button class=\"btn btn-sm btn-danger remove\" data-idx=\"${idx}\">×</button></td>`;
       tbody.appendChild(tr);
-      tr.querySelector('.qty-input').addEventListener('input', e => { const i = +e.target.dataset.idx; cart[i].quantity = parseFloat(e.target.value) || 1; });
-      tr.querySelector('.price-input').addEventListener('input', e => { const i = +e.target.dataset.idx; cart[i].unit_price = parseFloat(e.target.value) || 0; });
+      tr.querySelector('.qty-input').addEventListener('input', e => { const i = +e.target.dataset.idx; cart[i].quantity = Math.max(1, parseFloat(e.target.value)||1); recalcTotals(); });
+      const priceInput = tr.querySelector('.price-input');
+      if (!priceInput.disabled) priceInput.addEventListener('input', e => { const i = +e.target.dataset.idx; cart[i].unit_price = Math.max(0, parseFloat(e.target.value)||0); recalcTotals(); });
     });
 
-    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+    const discountEl = document.getElementById('discountInput');
+    const discount = Math.max(0, parseFloat(discountEl.value) || 0);
     const taxAmount = subTotal * taxRate / 100;
     const grandTotal = subTotal + taxAmount - discount;
+
     document.getElementById('subTotal').textContent   = subTotal.toFixed(2);
     document.getElementById('taxAmount').textContent  = taxAmount.toFixed(2);
     document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
@@ -106,28 +114,23 @@ document.addEventListener('DOMContentLoaded', () => {
   function recalcTotals() {
     let subTotal = 0;
     document.querySelectorAll('#cartTable tbody tr').forEach(tr => {
-      const qty = parseFloat(tr.querySelector('.qty-input').value) || 1;
-      const price = parseFloat(tr.querySelector('.price-input').value) || 0;
+      const qty = Math.max(1, parseFloat(tr.querySelector('.qty-input').value)||1);
+      const priceField = tr.querySelector('.price-input');
+      const price = Math.max(0, parseFloat(priceField.value)||0);
       const lineTot = qty * price;
       subTotal += lineTot;
       tr.querySelector('.item-total').textContent = lineTot.toFixed(2);
     });
-    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+    const discount = Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0);
     const taxAmount = subTotal * taxRate / 100;
     document.getElementById('subTotal').textContent   = subTotal.toFixed(2);
     document.getElementById('taxAmount').textContent  = taxAmount.toFixed(2);
     document.getElementById('grandTotal').textContent = (subTotal + taxAmount - discount).toFixed(2);
   }
 
-  document.querySelector('#cartTable tbody').addEventListener('input', e => {
-    if (e.target.matches('.qty-input') || e.target.matches('.price-input')) { recalcTotals(); }
-  });
-
   document.querySelector('#cartTable').addEventListener('click', e => {
     if (e.target.classList.contains('remove')) {
-      const idx = +e.target.dataset.idx;
-      cart.splice(idx, 1);
-      renderCart();
+      const idx = +e.target.dataset.idx; cart.splice(idx, 1); renderCart();
     }
   });
 
@@ -136,34 +139,31 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     const code = encodeURIComponent(e.target.value.trim());
     const it   = await fetch(`items_by_barcode.php?barcode=${code}`).then(r=>r.json());
-    if (!it.id) { alert('لم أجد مادة بهذا الباركود'); e.target.select(); return; }
-    const existing = cart.find(i => i.item_id == it.id);
+    if (!it.id) { toastErr('لم أجد مادة بهذا الباركود'); e.target.select(); return; }
+    if (parseFloat(it.stock) <= 0) { toastErr('نفدت الكمية'); e.target.select(); return; }
+    const existing = cart.find(i => String(i.item_id) === String(it.id));
     if (existing) existing.quantity += 1;
     else cart.push({ item_id: it.id, name: it.name_ar + (it.name_en ? ` / ${it.name_en}` : ''), unit_price: parseFloat(it.price), quantity: 1, group_id: it.group_id });
-    renderCart();
-    e.target.value = '';
+    renderCart(); e.target.value = '';
+    toastOk('تمت الإضافة إلى السلة');
   });
 
+  document.getElementById('discountInput').setAttribute('data-auth','input_discount');
   document.getElementById('discountInput').addEventListener('input', renderCart);
 
   document.getElementById('checkoutBtn').addEventListener('click', async () => {
-    if (!cart.length) return alert('السلة فارغة');
+    if (!cart.length) return toastErr('السلة فارغة');
     const subTotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
     const taxAmount = subTotal * taxRate / 100;
-    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+    const discount = Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0);
     const total = subTotal + taxAmount - discount;
 
-    const resp = await fetch('pos_handler.php', {
-      method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ items: cart, total })
-    });
+    const resp = await fetch('pos_handler.php', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ items: cart, total }) });
     const result = await resp.json();
-    if (!result.success) return alert('فشل في إنشاء الطلب: ' + (result.error||''));
+    if (!result.success) return toastErr('فشل في إنشاء الطلب');
 
-    // Group items by group_id and build per-printer images
-    const itemsByGroup = {};
-    cart.forEach(it => { const gid = parseInt(it.group_id || 0); if (!itemsByGroup[gid]) itemsByGroup[gid] = []; itemsByGroup[gid].push(it); });
-    const groupPrinters = result.groupPrinters || {};
-    const unassignedPrinters = result.unassignedPrinters || [];
+    const itemsByGroup = {}; cart.forEach(it => { const gid = parseInt(it.group_id || 0); if (!itemsByGroup[gid]) itemsByGroup[gid] = []; itemsByGroup[gid].push(it); });
+    const groupPrinters = result.groupPrinters || {}; const unassignedPrinters = result.unassignedPrinters || [];
 
     const images = [];
     for (const [gidStr, items] of Object.entries(itemsByGroup)) {
@@ -179,15 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const printResp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ images, order_id: result.orderId }) });
     const printResult = await printResp.json();
-    if (printResult.success) { alert('تم البيع وطباعة الفاتورة بنجاح'); cart.length = 0; renderCart(); }
-    else { alert('تم البيع ولكن فشل الطباعة: '+(printResult.error||'')); }
+    if (printResult.success) { toastOk('تم البيع وطباعة الفاتورة'); cart.length = 0; renderCart(); }
+    else { toastErr('تم البيع ولكن فشلت الطباعة'); }
   });
 
   async function generateInvoiceImage(items, subTotal, taxAmount, total, orderSeq, fsTitle, fsItem, fsTotal) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const settings = await fetch('get_print_settings.php').then(r => r.json());
-    const cfg = {}; settings.forEach(s => cfg[s.key] = s);
+    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+    const settings = await fetch('get_print_settings.php').then(r => r.json()); const cfg = {}; settings.forEach(s => cfg[s.key] = s);
     const widthMm = parseInt(cfg['print_width_mm']?.value) || 80; const pxPerMm = 7; const width = widthMm * pxPerMm;
 
     const infoLines = [];
@@ -196,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cfg['field_tax_number']?.value == 1) infoLines.push('الرقم الضريبي: ' + (cfg['tax_number']?.value || ''));
     infoLines.push(cfg['address']?.value || '');
 
-    const rowH=45, headerH=100, infoH=infoLines.length*25, tableH=(items.length+1)*rowH, footerH=80, extra=270;
+    const rowH=45, headerH=100, infoH=infoLines.length*25, tableH=(items.length+1)*rowH, footerH=110, extra=270;
     canvas.width = width; canvas.height = headerH + infoH + tableH + footerH + extra;
     ctx.fillStyle='white'; ctx.fillRect(0, 0, width, canvas.height);
 
@@ -207,20 +205,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     ctx.fillStyle='black'; ctx.textAlign='center'; ctx.font = `${Math.max(16, fsTitle)}px Arial`; infoLines.forEach(line => { ctx.fillText(line, width / 2, y); y += 25; });
-    ctx.font = `bold ${Math.max(16, fsTitle)}px Arial`; ctx.textAlign='right'; ctx.fillStyle='#333'; ctx.fillText(`رقم الطلب: ${orderSeq}`, width - 20, y + 40); y += 60;
+    ctx.font = `bold ${Math.max(16, fsTitle)}px Arial`; ctx.textAlign='right'; ctx.fillStyle='#111'; ctx.fillText(`رقم الطلب: ${orderSeq}`, width - 20, y + 40); y += 60;
 
-    const cols = ['اسم', 'كمية', 'سعر إفرادي', 'سعر إجمالي']; const colW = [width*0.4, width*0.2, width*0.2, width*0.2];
-    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.textAlign='center'; let x = width; cols.forEach((title, i) => { x -= colW[i]; ctx.strokeRect(x + 4, y, colW[i] - 8, rowH); ctx.fillText(title, x + colW[i] / 2, y + rowH / 2); }); y += rowH;
+    const cols = ['اسم', 'كمية', 'سعر إفرادي', 'سعر إجمالي']; const colW = [width*0.4, width*0.18, width*0.2, width*0.22];
+    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.textAlign='center'; let x = width; cols.forEach((title, i) => { x -= colW[i]; ctx.strokeStyle = '#ccc'; ctx.strokeRect(x + 4, y, colW[i] - 8, rowH); ctx.fillText(title, x + colW[i] / 2, y + rowH / 2); }); y += rowH;
 
-    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`;
-    items.forEach(item => { x = width; const nameLines = [item.name]; if (item.name_en) nameLines.push(item.name_en); const qty=item.quantity, price=item.unit_price, tot=(qty*price); const cells=[nameLines.join('\n'), qty, price, tot]; cells.forEach((txt, i) => { x -= colW[i]; ctx.strokeRect(x + 4, y, colW[i]-8, rowH); if (i===0 && String(txt).includes('\n')) { String(txt).split('\n').forEach((ln, idx)=>{ ctx.fillText(ln, x + colW[i]/2, y + 18 + idx*18); }); } else { ctx.fillText(txt, x + colW[i]/2, y + rowH/2); } }); y += rowH; });
+    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.fillStyle = '#000';
+    items.forEach(item => { x = width; const nameLines = [item.name]; if (item.name_en) nameLines.push(item.name_en); const qty=item.quantity, price=item.unit_price, tot=(qty*price); const cells=[nameLines.join('\n'), qty, price.toFixed(2), tot.toFixed(2)]; cells.forEach((txt, i) => { x -= colW[i]; ctx.strokeStyle='#eee'; ctx.strokeRect(x + 4, y, colW[i]-8, rowH); if (i===0 && String(txt).includes('\n')) { String(txt).split('\n').forEach((ln, idx)=>{ ctx.fillText(ln, x + colW[i]/2, y + 18 + idx*18); }); } else { ctx.fillText(txt, x + colW[i]/2, y + rowH/2); } }); y += rowH; });
 
     y += 20; ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(width-20, y); ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.stroke(); y += 30;
 
-    ctx.font = `bold ${Math.max(12, fsTotal)}px Arial`; ctx.textAlign='right';
-    ctx.fillText(`المجموع: ${subTotal}`, width - 4, y + 20);
-    ctx.fillText(`الضريبة: ${taxAmount}`, width - 4, y + 45);
-    ctx.fillText(`الإجمالي: ${total}`, width - 4, y + 70);
+    ctx.font = `bold ${Math.max(12, fsTotal)}px Arial`; ctx.textAlign='right'; ctx.fillStyle='#111';
+    ctx.fillText(`المجموع: ${subTotal.toFixed(2)}`, width - 4, y + 20);
+    ctx.fillText(`الضريبة: ${taxAmount.toFixed(2)}`, width - 4, y + 45);
+    ctx.fillText(`الإجمالي: ${total.toFixed(2)}`, width - 4, y + 70);
+
+    ctx.textAlign='center'; ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.fillText('شكراً لزيارتكم', width/2, y + 110);
 
     return canvas.toDataURL('image/png');
   }

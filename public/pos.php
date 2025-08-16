@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const fsItem  = <?= $fsItem ?>;
   const fsTotal = <?= $fsTotal ?>;
 
+  function toastOk(msg) { if (typeof showToast === 'function') showToast(msg, 2500); }
+  function toastErr(msg) { if (typeof showToast === 'function') showToast(msg, 3500); }
+
   function renderCart() {
     const tbody = document.querySelector('#cartTable tbody');
     tbody.innerHTML = '';
@@ -101,31 +104,30 @@ document.addEventListener('DOMContentLoaded', () => {
         <td><button class="btn btn-sm btn-danger remove" data-idx="${idx}">×</button></td>`;
       tbody.appendChild(tr);
     });
-    document.getElementById('subTotal').textContent = subTotal;
+    document.getElementById('subTotal').textContent = subTotal.toFixed(2);
     const taxAmount = subTotal * taxRate / 100;
-    document.getElementById('taxAmount').textContent = taxAmount;
+    document.getElementById('taxAmount').textContent = taxAmount.toFixed(2);
     const grandTotal = subTotal + taxAmount;
-    document.getElementById('grandTotal').textContent = grandTotal;
+    document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
     document.getElementById('checkoutBtn').disabled = cart.length === 0;
   }
 
   function handleAddToCart(e) {
     const btn = e.target.closest('.add-to-cart');
     if (!btn) return;
+    if (btn.hasAttribute('disabled')) return;
     const id = btn.dataset.id;
     const name = btn.dataset.name;
     const name_en = btn.dataset.namen;
     const price = parseFloat(btn.dataset.price);
     const groupId = parseInt(btn.dataset.groupId);
     const qtyInput = btn.parentElement.querySelector('.qty-input');
-    const quantity = parseFloat(qtyInput.value) || 1;
-    const existingIndex = cart.findIndex(it => it.item_id === id);
-    if (existingIndex !== -1) {
-      cart[existingIndex].quantity += quantity;
-    } else {
-      cart.push({ item_id: id, name, name_en, unit_price: price, quantity, group_id: groupId });
-    }
+    const quantity = Math.max(1, parseFloat(qtyInput.value) || 1);
+    const existingIndex = cart.findIndex(it => String(it.item_id) === String(id));
+    if (existingIndex !== -1) { cart[existingIndex].quantity += quantity; }
+    else { cart.push({ item_id: id, name, name_en, unit_price: price, quantity, group_id: groupId }); }
     renderCart();
+    toastOk('تمت الإضافة إلى السلة');
   }
   document.addEventListener('click', handleAddToCart);
 
@@ -140,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('checkoutBtn').addEventListener('click', completeSale);
 
   async function completeSale() {
-    if (cart.length === 0) { alert('السلة فارغة'); return; }
+    if (cart.length === 0) { toastErr('السلة فارغة'); return; }
     const subTotal = cart.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
     const taxAmount = subTotal * taxRate / 100;
     const total = subTotal + taxAmount;
@@ -150,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
       body: JSON.stringify({ items: cart, total })
     });
     const result = await response.json();
-    if (!result.success) { alert('فشل في إنشاء الطلب: ' + (result.error||'')); return; }
+    if (!result.success) { toastErr('فشل في إنشاء الطلب'); return; }
 
     const itemsByGroup = {};
     cart.forEach(it => { const gid = parseInt(it.group_id || 0); if (!itemsByGroup[gid]) itemsByGroup[gid] = []; itemsByGroup[gid].push(it); });
@@ -169,20 +171,15 @@ document.addEventListener('DOMContentLoaded', () => {
       images.push({ image: fullImg, printer_ids: unassignedPrinters });
     }
 
-    const printResp = await fetch('../src/print.php', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ images, order_id: result.orderId })
-    });
+    const printResp = await fetch('../src/print.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ images, order_id: result.orderId }) });
     const printResult = await printResp.json();
-    if (printResult.success) { alert('تم إنشاء الطلب وطباعة الفاتورة بنجاح'); cart.length = 0; renderCart(); }
-    else { alert('تم إنشاء الطلب ولكن فشل في الطباعة: ' + (printResult.error || '')); }
+    if (printResult.success) { toastOk('تم إنشاء الطلب وطباعة الفاتورة'); cart.length = 0; renderCart(); }
+    else { toastErr('تم البيع ولكن فشلت الطباعة'); }
   }
 
   async function generateInvoiceImage(items, subTotal, taxAmount, total, orderSeq, fsTitle, fsItem, fsTotal) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const settings = await fetch('get_print_settings.php').then(r => r.json());
-    const cfg = {}; settings.forEach(s => cfg[s.key] = s);
+    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+    const settings = await fetch('get_print_settings.php').then(r => r.json()); const cfg = {}; settings.forEach(s => cfg[s.key] = s);
     const widthMm = parseInt(cfg['print_width_mm']?.value) || 80; const pxPerMm = 7; const width = widthMm * pxPerMm;
 
     const infoLines = [];
@@ -191,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cfg['field_tax_number']?.value == 1) infoLines.push('الرقم الضريبي: ' + (cfg['tax_number']?.value || ''));
     infoLines.push(cfg['address']?.value || '');
 
-    const rowH=45, headerH=100, infoH=infoLines.length*25, tableH=(items.length+1)*rowH, footerH=80, extra=270;
+    const rowH=45, headerH=100, infoH=infoLines.length*25, tableH=(items.length+1)*rowH, footerH=110, extra=270;
     canvas.width = width; canvas.height = headerH + infoH + tableH + footerH + extra;
 
     ctx.fillStyle = 'white'; ctx.fillRect(0, 0, width, canvas.height);
@@ -205,41 +202,46 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.font = `${Math.max(16, fsTitle)}px Arial`;
     infoLines.forEach(line => { ctx.fillText(line, width / 2, y); y += 25; });
 
-    ctx.font = `bold ${Math.max(16, fsTitle)}px Arial`; ctx.textAlign = 'right'; ctx.fillStyle = '#333';
-    const orderText = `رقم الطلب: ${orderSeq}`; ctx.fillText(orderText, width - 20, y + 40); y += 60;
+    ctx.font = `bold ${Math.max(16, fsTitle)}px Arial`; ctx.textAlign = 'right'; ctx.fillStyle = '#111';
+    ctx.fillText(`رقم الطلب: ${orderSeq}`, width - 20, y + 40); y += 60;
 
-    const cols = ['اسم', 'كمية', 'سعر إفرادي', 'سعر إجمالي'];
-    const colW = [width * 0.4, width * 0.2, width * 0.2, width * 0.2];
+    const cols = ['اسم', 'كمية', 'سعر إفرادي', 'سعر إجمالي']; const colW = [width * 0.4, width * 0.18, width * 0.2, width * 0.22];
     ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.textAlign = 'center';
-    let x = width; cols.forEach((title, i) => { x -= colW[i]; ctx.strokeRect(x + 4, y, colW[i] - 8, rowH); ctx.fillText(title, x + colW[i] / 2, y + rowH / 2); }); y += rowH;
+    let x = width; cols.forEach((title, i) => { x -= colW[i]; ctx.strokeStyle = '#ccc'; ctx.strokeRect(x + 4, y, colW[i] - 8, rowH); ctx.fillText(title, x + colW[i] / 2, y + rowH / 2); }); y += rowH;
 
-    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`;
-    items.forEach(item => {
-      x = width;
-      const nameLines = [item.name]; if (item.name_en) nameLines.push(item.name_en);
+    ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.fillStyle = '#000';
+    items.forEach(item => { x = width; const nameLines = [item.name]; if (item.name_en) nameLines.push(item.name_en);
       const qty  = item.quantity; const price= item.unit_price; const tot  = (qty * item.unit_price);
-      const cells = [nameLines.join('\n'), qty, price, tot];
-      cells.forEach((txt, i) => { x -= colW[i]; ctx.strokeRect(x + 4, y, colW[i] - 8, rowH); if (i === 0 && String(txt).includes('\n')) { String(txt).split('\n').forEach((ln, idx) => { ctx.fillText(ln, x + colW[i] / 2, y + 18 + idx * 18); }); } else { ctx.fillText(txt, x + colW[i] / 2, y + rowH / 2); } });
-      y += rowH;
-    });
+      const cells = [nameLines.join('\n'), qty, price.toFixed(2), tot.toFixed(2)];
+      cells.forEach((txt, i) => { x -= colW[i]; ctx.strokeStyle = '#eee'; ctx.strokeRect(x + 4, y, colW[i] - 8, rowH);
+        if (i === 0 && String(txt).includes('\n')) { String(txt).split('\n').forEach((ln, idx) => { ctx.fillText(ln, x + colW[i] / 2, y + 18 + idx * 18); }); }
+        else { ctx.fillText(txt, x + colW[i] / 2, y + rowH / 2); } }); y += rowH; });
 
     y += 20; ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(width - 20, y); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke(); y += 30;
 
-    ctx.font = `bold ${Math.max(12, fsTotal)}px Arial`; ctx.textAlign = 'right';
-    ctx.fillText(`المجموع: ${subTotal}`, width - 4, y + 20);
-    ctx.fillText(`الضريبة: ${taxAmount}`, width - 4, y + 45);
-    ctx.fillText(`الإجمالي: ${total}`, width - 4, y + 70);
+    ctx.font = `bold ${Math.max(12, fsTotal)}px Arial`; ctx.textAlign = 'right'; ctx.fillStyle = '#111';
+    ctx.fillText(`المجموع: ${subTotal.toFixed(2)}`, width - 4, y + 20);
+    ctx.fillText(`الضريبة: ${taxAmount.toFixed(2)}`, width - 4, y + 45);
+    ctx.fillText(`الإجمالي: ${total.toFixed(2)}`, width - 4, y + 70);
+
+    ctx.textAlign = 'center'; ctx.font = `bold ${Math.max(12, fsItem)}px Arial`; ctx.fillText('شكراً لزيارتكم', width/2, y + 110);
 
     return canvas.toDataURL('image/png');
   }
 
+  const loadedGroups = new Set();
   const loadInitialContent = async () => {
     const firstTab = document.querySelector('#groupTabs .nav-link.active');
-    if (firstTab) {
-      const targetPane = document.querySelector(firstTab.dataset.bsTarget);
-      await fetchItems(firstTab.dataset.groupId, targetPane);
-    }
+    if (firstTab) { await loadGroup(firstTab); }
   };
+
+  async function loadGroup(tabEl) {
+    const groupId = tabEl.dataset.groupId;
+    const targetPane = document.querySelector(tabEl.dataset.bsTarget);
+    if (!loadedGroups.has(groupId)) {
+      await fetchItems(groupId, targetPane); loadedGroups.add(groupId);
+    }
+  }
 
   const fetchItems = async (groupId, targetPane) => {
     try {
@@ -254,14 +256,14 @@ document.addEventListener('DOMContentLoaded', () => {
               <p class="card-text">السعر: ${item.price} ${currency}</p>
               <p class="card-text">الكمية في المستودع: ${item.stock}</p>
               <div class="mt-auto">
-                <input type="number" class="form-control mb-2 qty-input" placeholder="الكمية" min="1" value="1">
-                <button ${item.stock == 0 ? 'disabled' : ''} class="btn btn-${item.stock == 0 ? 'danger' : 'success'} w-100 add-to-cart"
+                <input type="number" class="form-control mb-2 qty-input" placeholder="الكمية" min="1" value="1" data-auth="qty_input" ${item.stock <= 0 ? 'disabled' : ''}>
+                <button ${item.stock <= 0 ? 'disabled' : ''} class="btn btn-${item.stock <= 0 ? 'danger' : 'success'} w-100 add-to-cart"
                         data-id="${item.id}"
                         data-name="${item.name_ar}"
                         data-namen="${item.name_en}"
                         data-price="${item.price}"
                         data-group-id="${item.group_id}">
-                  إضافة للسلة
+                  ${item.stock <= 0 ? 'غير متاح' : 'إضافة للسلة'}
                 </button>
               </div>
             </div>
@@ -269,16 +271,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`
       ).join('');
       targetPane.querySelector('.row').innerHTML = itemsHTML;
-    } catch (error) { console.error('فشل في تحميل الأصناف:', error); }
+    } catch (error) { toastErr('فشل في تحميل الأصناف'); }
   };
 
   loadInitialContent();
   document.querySelectorAll('#groupTabs button[data-bs-toggle="tab"]').forEach(tab => {
-    tab.addEventListener('shown.bs.tab', async (event) => {
-      const groupId = event.target.dataset.groupId;
-      const targetPane = document.querySelector(event.target.dataset.bsTarget);
-      await fetchItems(groupId, targetPane);
-    });
+    tab.addEventListener('shown.bs.tab', async (event) => { await loadGroup(event.target); });
+    tab.addEventListener('click', async (event) => { await loadGroup(event.currentTarget); });
   });
 });
 </script>

@@ -36,8 +36,8 @@ try {
   <script src="../assets/popper.min.js"></script>
   <script src="../assets/bootstrap.bundle.min.js"></script>
 </head>
-<body class="app-gradient">
-  <header class="p-3 glass-header d-flex justify-content-between align-items-center">
+<body>
+  <header class="p-3 bg-light d-flex justify-content-between align-items-center">
     <div class="d-flex align-items-center">
       <img src="<?= htmlspecialchars($logoPath) ?>" alt="شعار" height="50">
       <span class="h5 mx-3"><?= htmlspecialchars($restaurantName) ?></span>
@@ -68,10 +68,12 @@ try {
       const auth = <?= json_encode(array_keys($authMap)) ?>;
       document.querySelectorAll('[data-auth]').forEach(el => {
         const key = el.getAttribute('data-auth');
-        if (auth.indexOf(key) === -1 && key) {
-          el.classList.add('disabled');
-          el.setAttribute('aria-disabled','true');
-          el.addEventListener('click', e => e.preventDefault());
+        if (key && auth.indexOf(key) === -1) {
+          if (el.tagName === 'A') {
+            el.classList.add('disabled'); el.setAttribute('aria-disabled','true'); el.addEventListener('click', e => e.preventDefault());
+          } else if (el.tagName === 'INPUT' || el.tagName === 'BUTTON' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+            el.disabled = true;
+          }
         }
       });
     });

@@ -1,0 +1,103 @@
+<?php
+class Item
+{
+    private PDO $db;
+
+    public function __construct(PDO $db)
+    {
+        $this->db = $db;
+    }
+
+    /** جلب كل الأصناف لمجموعة معينة */
+    public function allByGroup(int $groupId): array
+    {
+        $stmt = $this->db->prepare('
+            SELECT i.*, g.name AS group_name
+            FROM Items i
+            JOIN Groups g ON i.group_id = g.id
+            WHERE g.id = :gid
+            ORDER BY i.name_ar
+        ');
+        $stmt->execute([':gid' => $groupId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** جلب صنف واحد */
+    public function find(int $id): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM Items WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /** إضافة صنف */
+    public function create(array $data): bool
+    {
+        $stmt = $this->db->prepare('
+            INSERT INTO Items (name_ar, name_en, barcode, group_id, price, stock, unit)
+            VALUES (:name_ar, :name_en, :barcode, :group_id, :price, :stock, :unit)
+        ');
+        return $stmt->execute([
+            ':name_ar'  => $data['name_ar'],
+            ':name_en'  => $data['name_en'],
+            ':barcode'  => $data['barcode'],
+            ':group_id' => $data['group_id'],
+            ':price'    => $data['price'],
+            ':stock'    => $data['stock'],
+            ':unit'     => $data['unit'],
+        ]);
+    }
+
+    /** تحديث صنف */
+    public function update(int $id, array $data): bool
+    {
+        $stmt = $this->db->prepare('
+            UPDATE Items
+            SET name_ar = :name_ar,
+                name_en = :name_en,
+                barcode = :barcode,
+                group_id = :group_id,
+                price = :price,
+                stock = :stock,
+                unit = :unit
+            WHERE id = :id
+        ');
+        return $stmt->execute([
+            ':name_ar'  => $data['name_ar'],
+            ':name_en'  => $data['name_en'],
+            ':barcode'  => $data['barcode'],
+            ':group_id' => $data['group_id'],
+            ':price'    => $data['price'],
+            ':stock'    => $data['stock'],
+            ':unit'     => $data['unit'],
+            ':id'       => $id,
+        ]);
+    }
+
+    /** حذف صنف */
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM Items WHERE id = :id');
+        return $stmt->execute([':id' => $id]);
+    }
+
+    public function allWithStock(): array {
+        $stmt = $this->db->query("
+            SELECT id, name_ar, name_en, stock, unit
+            FROM Items
+            ORDER BY name_ar
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function allWithStockAndGroup(): array {
+        $stmt = $this->db->query("
+            SELECT i.id, i.name_ar, i.name_en, i.stock, i.unit, g.name AS group_name
+            FROM Items i
+            LEFT JOIN Groups g ON g.id = i.group_id
+            ORDER BY i.name_ar
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}

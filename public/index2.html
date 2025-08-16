@@ -1,0 +1,39 @@
+<?php
+require_once 'db.php';
+require_once 'auth.php';
+require_login();
+
+// تحميل إعدادات النظام
+$stmt = $pdo->query("SELECT restaurant_name, logo_path FROM System_Settings ORDER BY id DESC LIMIT 1");
+$settings = $stmt->fetch(PDO::FETCH_ASSOC);
+$restaurantName = $settings['restaurant_name'] ?? 'مطعم بدون اسم';
+$logo = $settings['logo_path'] ?? 'default_logo.png'; // تأكد من وجود شعار افتراضي
+
+$username = $_SESSION['user']['username'];
+$role = $_SESSION['user']['role'];
+?>
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>الصفحة الرئيسية</title>
+  <link rel="stylesheet" href="public/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="<?= htmlspecialchars($logo) ?>" alt="شعار المطعم" style="height: 100px;">
+      <h1>مرحبًا بك في <?= htmlspecialchars($restaurantName) ?></h1>
+      <p>أهلاً <?= htmlspecialchars($username) ?> (<?= htmlspecialchars($role) ?>)</p>
+    </div>
+
+    <div class="content">
+      <?php if (is_admin()): ?>
+        <p>هذه لوحة المشرف. يمكنك تعديل الإعدادات وإدارة المستخدمين.</p>
+      <?php else: ?>
+        <p>هذه شاشة الكاشير. يمكنك البدء في تسجيل الطلبات.</p>
+      <?php endif; ?>
+    </div>
+  </div>
+</body>
+</html>

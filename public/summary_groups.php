@@ -46,9 +46,9 @@ include 'header.php';
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="col-auto"><button class="btn btn-primary">تصفية</button></div>
-      <div class="col-auto"><button type="button" id="printSummary" class="btn btn-outline-primary">طباعة كإيصال</button></div>
-      <div class="col-auto"><button type="button" id="exportPDF" class="btn btn-outline-dark">تصدير PDF</button></div>
+      <div class="col-auto mt-4"><button class="btn btn-primary">تصفية</button></div>
+      <div class="col-auto mt-4"><button type="button" id="printSummary" class="btn btn-outline-primary">طباعة كإيصال</button></div>
+      <div class="col-auto mt-4"><button type="button" id="exportPDF" class="btn btn-outline-dark">تصدير PDF</button></div>
     </form>
   </div>
 

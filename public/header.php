@@ -35,6 +35,7 @@ try {
   <script src="../assets/jquery.min.js"></script>
   <script src="../assets/popper.min.js"></script>
   <script src="../assets/bootstrap.bundle.min.js"></script>
+  <script src="../assets/tailwindcss.css"></script>
 </head>
 <body>
   <header class="p-3 bg-light d-flex justify-content-between align-items-center">

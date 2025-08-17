@@ -44,10 +44,18 @@ foreach ($printFields as $f) { $fieldValues[$f] = (!empty($settings[$f]) && $set
 <body>
   <?php include 'header.php'; ?>
   <main class="container mt-4">
-    <h2>إعدادات النظام</h2>
-    <a href="db_backup.php" class="btn btn-sm btn-outline-danger mx-1">النسخ الاحتياطي</a>
-    <a href="authorizations.php" class="btn btn-sm btn-outline-dark mx-1">إدارة الصلاحيات</a>
-    <form action="settings_handler.php" method="post" enctype="multipart/form-data">
+    <div class="d-flex justify-content-between align-content-left mt-4 mb-4">
+      <div>
+        <h2>إعدادات النظام</h2>
+      </div>
+      <div>
+        <a href="db_backup.php" class="btn btn-sm btn-outline-danger mx-1">النسخ الاحتياطي</a>
+        <a href="authorizations.php" class="btn btn-sm btn-outline-dark mx-1">إدارة الصلاحيات</a>
+        <a href="reset_data.php" class="btn btn-outline-danger">تفريغ البيانات…</a>
+      </div>
+    </div>
+    <hr>
+    <form action="settings_handler.php" method="post" enctype="multipart/form-data" class="mt-4">
       <div class="mb-3">
         <label>اسم المنظّمة/المطعم</label>
         <input type="text" name="restaurant_name" class="form-control" value="<?= htmlspecialchars($restaurantName) ?>" required>
@@ -61,6 +69,8 @@ foreach ($printFields as $f) { $fieldValues[$f] = (!empty($settings[$f]) && $set
           <img src="<?= htmlspecialchars($logoPath) ?>" alt="الشعار" height="80" class="mt-2">
         <?php endif; ?>
       </div>
+
+      <hr>
 
       <div class="mb-3">
         <label>الرقم الضريبي</label>
@@ -82,6 +92,17 @@ foreach ($printFields as $f) { $fieldValues[$f] = (!empty($settings[$f]) && $set
         <input type="number" name="print_width_mm" class="form-control" value="<?= htmlspecialchars($printWidthMm) ?>">
       </div>
 
+      <div class="mb-3">
+        <label>العملة الافتراضية</label>
+        <select name="currency" class="form-control">
+          <option value="SYP" <?= $currency==='SYP'?'selected':'' ?>>ليرة سورية (SYP)</option>
+          <option value="USD" <?= $currency==='USD'?'selected':'' ?>>دولار أمريكي (USD)</option>
+          <option value="TRY" <?= $currency==='TRY'?'selected':'' ?>>ليرة تركية (TRY)</option>
+        </select>
+      </div>
+
+      <hr>
+
       <h4 class="mt-4">حجم الخط في الفاتورة</h4>
       <div class="row g-3">
         <div class="col-md-4">
@@ -93,10 +114,12 @@ foreach ($printFields as $f) { $fieldValues[$f] = (!empty($settings[$f]) && $set
           <input type="number" name="font_size_item" class="form-control" value="<?= htmlspecialchars($fontSizeItem) ?>">
         </div>
         <div class="col-md-4">
-          <label>حجم خط المجاميع</label>
+          <label>حجم خط المجموع</label>
           <input type="number" name="font_size_total" class="form-control" value="<?= htmlspecialchars($fontSizeTotal) ?>">
         </div>
       </div>
+
+      <hr>
 
       <h4 class="mt-4">حجم الخط في تقارير الطباعة</h4>
       <div class="row g-3">
@@ -109,39 +132,42 @@ foreach ($printFields as $f) { $fieldValues[$f] = (!empty($settings[$f]) && $set
           <input type="number" name="font_size_report_item" class="form-control" value="<?= htmlspecialchars($fontSizeReportItem) ?>">
         </div>
         <div class="col-md-4">
-          <label>حجم المجاميع في التقرير</label>
+          <label>حجم المجموع في التقرير</label>
           <input type="number" name="font_size_report_total" class="form-control" value="<?= htmlspecialchars($fontSizeReportTotal) ?>">
         </div>
       </div>
 
-      <div class="mt-4">
-        <a href="reset_data.php" class="btn btn-outline-danger">تفريغ البيانات…</a>
-      </div>
+      <hr>
 
-      <div class="mb-3">
-        <label>العملة الافتراضية</label>
-        <select name="currency" class="form-control">
-          <option value="SYP" <?= $currency==='SYP'?'selected':'' ?>>ليرة سورية (SYP)</option>
-          <option value="USD" <?= $currency==='USD'?'selected':'' ?>>دولار أمريكي (USD)</option>
-          <option value="TRY" <?= $currency==='TRY'?'selected':'' ?>>ليرة تركية (TRY)</option>
-        </select>
+      <!-- Grid container for the checkboxes -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 rounded-lg bg-gray-100">
+          <?php
+          $labels = [
+              'field_item_name_ar'    => 'اسم المادة بالعربي',
+              'field_item_name_en'    => 'اسم المادة بالإنكليزي',
+              'field_tax_number'      => 'الرقم الضريبي',
+              'field_username'        => 'اسم المستخدم',
+              'field_restaurant_name' => 'اسم المطعم/المنشأة',
+              'field_restaurant_logo' => 'شعار المنشأة',
+          ];
+          // This is a placeholder for your existing PHP logic to get $fieldValues
+          $fieldValues = isset($fieldValues) ? $fieldValues : [];
+          
+          foreach ($labels as $key => $label): ?>
+          
+          <!-- Each form-check div becomes a grid item -->
+          <div class="flex items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300">
+              <input class="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 transition duration-150 ease-in-out" 
+                    type="checkbox" 
+                    name="<?= $key ?>" 
+                    id="<?= $key ?>" 
+                    value="1" 
+                    <?= isset($fieldValues[$key]) && $fieldValues[$key] ? 'checked' : '' ?>>
+              <label class="mr-3 text-gray-700 cursor-pointer" for="<?= $key ?>"><?= $label ?></label>
+          </div>
+          
+          <?php endforeach; ?>
       </div>
-
-      <h4 class="mt-4">اختر الحقول للطباعة</h4>
-      <?php $labels = [
-        'field_item_name_ar'    => 'اسم المادة بالعربي',
-        'field_item_name_en'    => 'اسم المادة بالإنكليزي',
-        'field_tax_number'      => 'الرقم الضريبي',
-        'field_username'        => 'اسم المستخدم',
-        'field_restaurant_name' => 'اسم المطعم/المنشأة',
-        'field_restaurant_logo' => 'شعار المنشأة',
-      ];
-      foreach ($labels as $key => $label): ?>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="<?= $key ?>" id="<?= $key ?>" value="1" <?= $fieldValues[$key] ? 'checked' : '' ?>>
-        <label class="form-check-label mr-3" for="<?= $key ?>"><?= $label ?></label>
-      </div>
-      <?php endforeach; ?>
 
       <button type="submit" class="btn btn-success mt-3">حفظ الإعدادات</button>
     </form>

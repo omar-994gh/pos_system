@@ -36,13 +36,13 @@ $usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fet
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="col-auto"><button class="btn btn-primary">تصفية</button></div>
+      <div class="col-auto mt-3"><button class="btn btn-primary">تصفية</button></div>
     </form>
     <div>
-      <a href="summary_groups.php" class="btn btn-outline-success mb-2">ملخص المجموعات</a>
-      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_username" checked><label class="form-check-label" for="f_username">اسم المستخدم</label></div>
-      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_total" checked><label class="form-check-label" for="f_total">القيم الإجمالية</label></div>
-      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_details"><label class="form-check-label" for="f_details">تفاصيل الفواتير</label></div>
+      <!-- <a href="summary_groups.php" class="btn btn-outline-success mb-2">ملخص المجموعات</a> -->
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_username" checked><label class="form-check-label pr-4" for="f_username">اسم المستخدم</label></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_total" checked><label class="form-check-label pr-4" for="f_total">القيم الإجمالية</label></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_details"><label class="form-check-label pr-4" for="f_details">تفاصيل الفواتير</label></div>
       <button id="printSales" class="btn btn-outline-primary mt-2">طباعة كإيصال</button>
       <button id="exportPDF" class="btn btn-outline-dark mt-2">تصدير PDF</button>
     </div>

@@ -250,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const itemsHTML = items.map(item => 
         `<div class="col-sm-6 col-md-4 mb-4">
           <div class="card h-100">
-            <img class="card-img-top" src="images/default-item.png" alt="${item.name_ar}">
             <div class="card-body d-flex flex-column">
               <h5 class="card-title">${item.name_ar}</h5>
               <p class="card-text">السعر: ${item.price} ${currency}</p>

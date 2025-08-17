@@ -15,8 +15,8 @@ $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
 $orderId = isset($_GET['order_id']) ? (int)$_GET['order_id'] : 0;
 
 $model = new SalesLog($db);
-$summary = $model->summary($from, $to);
-$details = $model->details($from, $to);
+$summary = $model->summary($from, $to, $userId);
+$details = $model->details($from, $to, $userId);
 
 $usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -24,10 +24,11 @@ $usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fet
 $orderDetails = [];
 if ($orderId) {
     $stmt = $db->prepare("
-        SELECT oi.*, o.created_at, o.total as order_total, u.username
+        SELECT oi.*, o.created_at, o.total as order_total, u.username, i.name_ar as item_name
         FROM Order_Items oi
         JOIN Orders o ON oi.order_id = o.id
         JOIN Users u ON o.user_id = u.id
+        JOIN Items i ON oi.item_id = i.id
         WHERE o.id = ?
         ORDER BY oi.id
     ");

@@ -175,10 +175,29 @@ CREATE TABLE IF NOT EXISTS Authorizations (
 );
 SQL);
 
+// Create Refunds table for tracking item refunds
+$db->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS Refunds (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	order_id INTEGER NOT NULL REFERENCES Orders(id) ON DELETE CASCADE,
+	item_id INTEGER NOT NULL REFERENCES Items(id) ON DELETE CASCADE,
+	quantity INTEGER NOT NULL,
+	amount REAL NOT NULL,
+	reason TEXT NOT NULL,
+	user_id INTEGER NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+	created_at DATETIME NOT NULL
+);
+SQL);
+
 // Helpful indexes
 $db->exec('CREATE INDEX IF NOT EXISTS idx_items_barcode ON Items(barcode)');
 $db->exec('CREATE INDEX IF NOT EXISTS idx_items_group ON Items(group_id)');
 $db->exec('CREATE INDEX IF NOT EXISTS idx_orders_created ON Orders(created_at)');
 $db->exec('CREATE INDEX IF NOT EXISTS idx_oi_order ON Order_Items(order_id)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_oi_item ON Order_Items(item_id)');
 $db->exec('CREATE INDEX IF NOT EXISTS idx_wi_date ON Warehouse_Invoices(date)');
 $db->exec('CREATE INDEX IF NOT EXISTS idx_wii_invoice ON Warehouse_Invoice_Items(invoice_id)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_refunds_order ON Refunds(order_id)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_refunds_item ON Refunds(item_id)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_refunds_user ON Refunds(user_id)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_refunds_created ON Refunds(created_at)');

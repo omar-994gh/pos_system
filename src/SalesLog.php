@@ -15,9 +15,10 @@ class SalesLog
      *
      * @param string|null $dateFrom 'YYYY-MM-DD'
      * @param string|null $dateTo   'YYYY-MM-DD'
+     * @param int|null $userId
      * @return array Each row: [user_id, username, sale_count, total_amount, avg_amount]
      */
-    public function summary(?string $dateFrom, ?string $dateTo): array
+    public function summary(?string $dateFrom, ?string $dateTo, ?int $userId = null): array
     {
         $sql = "
             SELECT u.id AS user_id,
@@ -38,6 +39,10 @@ class SalesLog
             $sql .= " AND DATE(o.created_at) <= :to";
             $params[':to'] = $dateTo;
         }
+        if ($userId) {
+            $sql .= " AND o.user_id = :userId";
+            $params[':userId'] = $userId;
+        }
         $sql .= " GROUP BY u.id, u.username ORDER BY total_amount DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -49,9 +54,10 @@ class SalesLog
      *
      * @param string|null $dateFrom
      * @param string|null $dateTo
+     * @param int|null $userId
      * @return array Each row: [order_id, created_at, total, username]
      */
-    public function details(?string $dateFrom, ?string $dateTo): array
+    public function details(?string $dateFrom, ?string $dateTo, ?int $userId = null): array
     {
         $sql = "
             SELECT o.id AS order_id,
@@ -70,6 +76,10 @@ class SalesLog
         if ($dateTo) {
             $sql .= " AND DATE(o.created_at) <= :to";
             $params[':to'] = $dateTo;
+        }
+        if ($userId) {
+            $sql .= " AND o.user_id = :userId";
+            $params[':userId'] = $userId;
         }
         $sql .= " ORDER BY o.created_at DESC";
         $stmt = $this->db->prepare($sql);

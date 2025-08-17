@@ -183,6 +183,16 @@ document.addEventListener('DOMContentLoaded', () => {
     else { toastErr('تم البيع ولكن فشلت الطباعة'); }
   });
 
+  // Guard add-to-cart clicks for zero stock (in case of future UI entrypoints)
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.add-to-cart');
+    if (!btn) return;
+    if (btn.hasAttribute('disabled')) {
+      if (typeof showToast==='function') showToast('الكمية غير متوفرة');
+      e.preventDefault();
+    }
+  });
+
   async function generateInvoiceImage(items, subTotal, taxAmount, total, orderSeq, fsTitle, fsItem, fsTotal) {
     const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
     const settings = await fetch('get_print_settings.php').then(r => r.json()); const cfg = {}; settings.forEach(s => cfg[s.key] = s);

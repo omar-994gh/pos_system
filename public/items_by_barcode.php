@@ -8,7 +8,7 @@ $bc = trim($_GET['barcode'] ?? '');
 $item = null;
 if ($bc !== '') {
     $stmt = $db->prepare(
-        'SELECT id, name_ar, name_en, barcode, price, unit, group_id
+        'SELECT id, name_ar, name_en, barcode, price, unit, group_id, stock
          FROM Items 
          WHERE barcode = :bc'
     );

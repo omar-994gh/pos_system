@@ -30,6 +30,8 @@ $availableElements = [
 	'nav_settings' => 'Settings Navigation',
 	'nav_users' => 'Users Navigation',
 	'nav_warehouse' => 'Warehouse Navigation',
+	'input_edit_price' => 'Edit Price Input',
+	'input_discount' => 'Discount Input',
 ];
 
 $existing = [];

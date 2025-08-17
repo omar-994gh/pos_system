@@ -20,6 +20,10 @@ $currency = $settings['currency'] ?? 'USD';
 $fsTitle = (int)($settings['font_size_title'] ?? 22);
 $fsItem  = (int)($settings['font_size_item'] ?? 16);
 $fsTotal = (int)($settings['font_size_total'] ?? 18);
+
+// Check privileges
+$canEditPrice = Auth::canEditPrice($db);
+$canAddDiscount = Auth::canAddDiscount($db);
 ?>
 
 <?php include 'header.php'; ?>
@@ -70,6 +74,10 @@ $fsTotal = (int)($settings['font_size_total'] ?? 18);
     <div class="mt-3">
       <p>المجموع: <span id="subTotal">0.00</span> <?= $currency ?></p>
       <p>الضريبة (<?= htmlspecialchars($taxRate) ?>%): <span id="taxAmount">0.00</span> <?= $currency ?></p>
+      <div class="mb-2">
+        <label>الخصم (<?= $currency ?>):</label>
+        <input type="number" id="discountInput" class="form-control" value="0" min="0" <?= $canAddDiscount ? '' : 'disabled' ?>>
+      </div>
       <h5>الإجمالي: <span id="grandTotal">0.00</span> <?= $currency ?></h5>
       <button id="checkoutBtn" class="btn btn-primary w-100" data-auth="btn_checkout" disabled>إنشاء الطلب</button>
     </div>
@@ -99,15 +107,49 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${item.name}</td>
-        <td>${item.quantity}</td>
-        <td>${(item.quantity * item.unit_price)}</td>
+        <td><input type="number" class="form-control form-control-sm qty-input" data-idx="${idx}" min="1" value="${item.quantity}"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" data-idx="${idx}" step="0.01" value="${item.unit_price}" data-auth="input_edit_price" ${<?= $canEditPrice ? 'true' : 'false' ?> ? '' : 'disabled' }></td>
+        <td><span class="item-total">${(item.quantity * item.unit_price).toFixed(2)}</span></td>
         <td><button class="btn btn-sm btn-danger remove" data-idx="${idx}">×</button></td>`;
       tbody.appendChild(tr);
+      
+      // Add event listeners for quantity and price inputs
+      tr.querySelector('.qty-input').addEventListener('input', e => { 
+        const i = +e.target.dataset.idx; 
+        cart[i].quantity = Math.max(1, parseFloat(e.target.value)||1); 
+        recalcTotals(); 
+      });
+      
+      const priceInput = tr.querySelector('.price-input');
+      if (!priceInput.disabled) {
+        priceInput.addEventListener('input', e => { 
+          const i = +e.target.dataset.idx; 
+          cart[i].unit_price = Math.max(0, parseFloat(e.target.value)||0); 
+          recalcTotals(); 
+        });
+      }
     });
-    document.getElementById('subTotal').textContent = subTotal.toFixed(2);
+    
+    recalcTotals();
+  }
+
+  function recalcTotals() {
+    let subTotal = 0;
+    document.querySelectorAll('#cartTable tbody tr').forEach(tr => {
+      const qty = Math.max(1, parseFloat(tr.querySelector('.qty-input').value)||1);
+      const priceField = tr.querySelector('.price-input');
+      const price = Math.max(0, parseFloat(priceField.value)||0);
+      const lineTot = qty * price;
+      subTotal += lineTot;
+      tr.querySelector('.item-total').textContent = lineTot.toFixed(2);
+    });
+    
+    const discount = Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0);
     const taxAmount = subTotal * taxRate / 100;
+    const grandTotal = subTotal + taxAmount - discount;
+    
+    document.getElementById('subTotal').textContent = subTotal.toFixed(2);
     document.getElementById('taxAmount').textContent = taxAmount.toFixed(2);
-    const grandTotal = subTotal + taxAmount;
     document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
     document.getElementById('checkoutBtn').disabled = cart.length === 0;
   }
@@ -140,12 +182,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('checkoutBtn').addEventListener('click', completeSale);
+  
+  // Add discount input event listener
+  document.getElementById('discountInput').addEventListener('input', recalcTotals);
 
   async function completeSale() {
     if (cart.length === 0) { toastErr('السلة فارغة'); return; }
     const subTotal = cart.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
     const taxAmount = subTotal * taxRate / 100;
-    const total = subTotal + taxAmount;
+    const discount = Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0);
+    const total = subTotal + taxAmount - discount;
 
     const response = await fetch('pos_handler.php', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -173,8 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const printResp = await fetch('../src/print.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ images, order_id: result.orderId }) });
     const printResult = await printResp.json();
-    if (printResult.success) { toastOk('تم إنشاء الطلب وطباعة الفاتورة'); cart.length = 0; renderCart(); }
-    else { toastErr('تم البيع ولكن فشلت الطباعة'); }
+    if (printResult.success) { 
+      toastOk('تم إنشاء الطلب وطباعة الفاتورة'); 
+      cart.length = 0; 
+      renderCart(); 
+    } else { 
+      toastErr('تم البيع ولكن فشلت الطباعة'); 
+      // Clear cart and show error message even when printing fails
+      cart.length = 0; 
+      renderCart(); 
+    }
   }
 
   async function generateInvoiceImage(items, subTotal, taxAmount, total, orderSeq, fsTitle, fsItem, fsTotal) {

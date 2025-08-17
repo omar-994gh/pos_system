@@ -61,6 +61,9 @@ try {
       <?php if (Auth::isAdmin()): ?>
         <a href="authorizations.php" class="btn btn-sm btn-outline-dark mx-1">الصلاحيات</a>
       <?php endif; ?>
+      <?php if (Auth::isAdmin()): ?>
+        <a href="refund.php" class="btn btn-sm btn-outline-warning mx-1">استرداد المبيعات</a>
+      <?php endif; ?>
       <a href="logout.php" class="btn btn-sm btn-danger mx-1">خروج (<?= htmlspecialchars($username) ?>)</a>
     </nav>
   </header>

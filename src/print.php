@@ -47,6 +47,24 @@ if (!$allPrinters) {
 	exit;
 }
 
+// Separate assigned and unassigned printers
+$assignedPrinterIds = [];
+$unassignedPrinterIds = [];
+
+foreach ($allPrinters as $printer) {
+	$printerId = (int)$printer['id'];
+	// Check if this printer is assigned to any group
+	$stmt = $pdo->prepare("SELECT COUNT(*) FROM Groups WHERE printer_id = ?");
+	$stmt->execute([$printerId]);
+	$isAssigned = $stmt->fetchColumn() > 0;
+	
+	if ($isAssigned) {
+		$assignedPrinterIds[] = $printerId;
+	} else {
+		$unassignedPrinterIds[] = $printerId;
+	}
+}
+
 $errors = [];
 foreach ($images as $imgSpec) {
 	$img = str_replace('data:image/png;base64,','',$imgSpec['image']);
@@ -54,10 +72,19 @@ foreach ($images as $imgSpec) {
 	$temp = __DIR__ . '/temp_invoice_' . uniqid() . '.png';
 	file_put_contents($temp, $bin);
 
-	$targetPrinters = $allPrinters;
+	$targetPrinters = [];
+	
+	// If printer_ids are specified, use those (for group-specific receipts)
 	if (!empty($imgSpec['printer_ids'])) {
 		$ids = array_map('intval', $imgSpec['printer_ids']);
-		$targetPrinters = array_values(array_filter($allPrinters, function($p) use($ids){ return in_array((int)$p['id'], $ids, true); }));
+		$targetPrinters = array_values(array_filter($allPrinters, function($p) use($ids){ 
+			return in_array((int)$p['id'], $ids, true); 
+		}));
+	} else {
+		// If no printer_ids specified, this is the full cart receipt - send to unassigned printers
+		$targetPrinters = array_values(array_filter($allPrinters, function($p) use($unassignedPrinterIds){ 
+			return in_array((int)$p['id'], $unassignedPrinterIds, true); 
+		}));
 	}
 
 	foreach ($targetPrinters as $p) {

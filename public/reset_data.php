@@ -5,7 +5,6 @@ Auth::requireLogin();
 if (!Auth::isAdmin()) { header('Location: dashboard.php'); exit; }
 
 $tables = [
-  'Users' => 'المستخدمون',
   'Items' => 'الأصناف',
   'Groups' => 'المجموعات',
   'Printers' => 'الطابعات',

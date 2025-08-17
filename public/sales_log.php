@@ -45,6 +45,7 @@ $usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fet
       <div class="form-check"><input class="form-check-input" type="checkbox" id="f_details"><label class="form-check-label pr-4" for="f_details">تفاصيل الفواتير</label></div>
       <button id="printSales" class="btn btn-outline-primary mt-2">طباعة كإيصال</button>
       <button id="exportPDF" class="btn btn-outline-dark mt-2">تصدير PDF</button>
+      <a href="refund.php" class="btn btn-outline-warning mt-2">استرداد المبيعات</a>
     </div>
   </div>
 

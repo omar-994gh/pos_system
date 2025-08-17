@@ -109,4 +109,45 @@ class Auth
     {
         return self::isLoggedIn() && ($_SESSION['role'] === 'Cashier');
     }
+
+    /**
+     * التحقق من صلاحية محددة للمستخدم
+     * @param PDO $db
+     * @param string $elementKey
+     * @return bool
+     */
+    public static function hasPrivilege(PDO $db, string $elementKey): bool
+    {
+        if (self::isAdmin()) {
+            return true; // Admin has all privileges
+        }
+        
+        if (!self::isLoggedIn()) {
+            return false;
+        }
+        
+        $stmt = $db->prepare('SELECT COUNT(*) FROM Authorizations WHERE user_id = :uid AND element_key = :ek AND is_enabled = 1');
+        $stmt->execute([':uid' => $_SESSION['user_id'], ':ek' => $elementKey]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * التحقق من صلاحية تعديل السعر
+     * @param PDO $db
+     * @return bool
+     */
+    public static function canEditPrice(PDO $db): bool
+    {
+        return self::hasPrivilege($db, 'input_edit_price');
+    }
+
+    /**
+     * التحقق من صلاحية إضافة خصم
+     * @param PDO $db
+     * @return bool
+     */
+    public static function canAddDiscount(PDO $db): bool
+    {
+        return self::hasPrivilege($db, 'input_discount');
+    }
 }

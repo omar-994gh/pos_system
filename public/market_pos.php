@@ -13,6 +13,10 @@ $currency = htmlspecialchars($setting['currency'] ?? 'USD');
 $fsTitle = (int)($setting['font_size_title'] ?? 22);
 $fsItem  = (int)($setting['font_size_item'] ?? 16);
 $fsTotal = (int)($setting['font_size_total'] ?? 18);
+
+// Check privileges
+$canEditPrice = Auth::canEditPrice($db);
+$canAddDiscount = Auth::canAddDiscount($db);
 ?>
 <?php include 'header.php'; ?>
 
@@ -53,7 +57,7 @@ $fsTotal = (int)($setting['font_size_total'] ?? 18);
         <p>الضريبة (<?= $taxRate ?>%): <span id="taxAmount">0.00</span></p>
         <div class="mb-2">
           <label>الخصم (<?= $currency ?>):</label>
-          <input type="number" id="discountInput" class="form-control" value="0" min="0">
+          <input type="number" id="discountInput" class="form-control" value="0" min="0" <?= $canAddDiscount ? '' : 'disabled' ?>>
         </div>
         <h5>الإجمالي: <span id="grandTotal">0.00</span> <?= $currency ?></h5>
         <button id="checkoutBtn" class="btn btn-success w-100" data-auth="btn_checkout" disabled>
@@ -91,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.innerHTML = `
         <td>${it.name}</td>
         <td><input type=\"number\" class=\"form-control form-control qty-input w-100\" data-idx=\"${idx}\" min=\"1\" value=\"${it.quantity}\"></td>
-        <td><input type=\"number\" class=\"form-control form-control price-input w-100\" data-idx=\"${idx}\" step=\"0.01\" value=\"${it.unit_price}\" data-auth=\"input_edit_price\"></td>
+        <td><input type=\"number\" class=\"form-control form-control price-input w-100\" data-idx=\"${idx}\" step=\"0.01\" value=\"${it.unit_price}\" data-auth=\"input_edit_price\" ${<?= $canEditPrice ? 'true' : 'false' ?> ? '' : 'disabled' }></td>
         <td><span class=\"item-total\">${lineTotal.toFixed(2)}</span></td>
         <td><button class=\"btn btn-sm btn-danger remove\" data-idx=\"${idx}\">×</button></td>`;
       tbody.appendChild(tr);
@@ -179,8 +183,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const printResp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ images, order_id: result.orderId }) });
     const printResult = await printResp.json();
-    if (printResult.success) { toastOk('تم البيع وطباعة الفاتورة'); cart.length = 0; renderCart(); }
-    else { toastErr('تم البيع ولكن فشلت الطباعة'); }
+    if (printResult.success) { 
+      toastOk('تم البيع وطباعة الفاتورة'); 
+      cart.length = 0; 
+      renderCart(); 
+    } else { 
+      toastErr('تم البيع ولكن فشلت الطباعة'); 
+      // Clear cart and show error message even when printing fails
+      cart.length = 0; 
+      renderCart(); 
+    }
   });
 
   // Guard add-to-cart clicks for zero stock (in case of future UI entrypoints)

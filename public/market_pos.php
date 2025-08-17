@@ -78,6 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const fsTitle = <?= $fsTitle ?>;
   const fsItem  = <?= $fsItem ?>;
   const fsTotal = <?= $fsTotal ?>;
+  const canEditPrice = <?= $canEditPrice ? 'true' : 'false' ?>;
+  const canAddDiscount = <?= $canAddDiscount ? 'true' : 'false' ?>;
 
   function toastOk(msg) { if (typeof showToast === 'function') showToast(msg, 2500); }
   function toastErr(msg) { if (typeof showToast === 'function') showToast(msg, 3500); }
@@ -95,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.innerHTML = `
         <td>${it.name}</td>
         <td><input type=\"number\" class=\"form-control form-control qty-input w-100\" data-idx=\"${idx}\" min=\"1\" value=\"${it.quantity}\"></td>
-        <td><input type=\"number\" class=\"form-control form-control price-input w-100\" data-idx=\"${idx}\" step=\"0.01\" value=\"${it.unit_price}\" data-auth=\"input_edit_price\" ${<?= $canEditPrice ? 'true' : 'false' ?> ? '' : 'disabled' }></td>
+        <td><input type=\"number\" class=\"form-control form-control price-input w-100\" data-idx=\"${idx}\" step=\"0.01\" value=\"${it.unit_price}\" data-auth=\"input_edit_price\" ${canEditPrice ? '' : 'disabled' }></td>
         <td><span class=\"item-total\">${lineTotal.toFixed(2)}</span></td>
         <td><button class=\"btn btn-sm btn-danger remove\" data-idx=\"${idx}\">×</button></td>`;
       tbody.appendChild(tr);

@@ -80,6 +80,9 @@ include 'header.php';
                 <p class="mb-0">المجموع: <?= number_format($orderDetails[0]['order_total'], 2) ?></p>
             </div>
             <div class="card-body">
+                <div class="mb-3 text-start">
+                    <button type="button" class="btn btn-danger" id="refundAllBtn" data-order-id="<?= $orderId ?>">استرداد كل الأصناف</button>
+                </div>
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -223,6 +226,38 @@ include 'header.php';
 <script src="../assets/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Refund ALL items button
+    const btnAll = document.getElementById('refundAllBtn');
+    if (btnAll) {
+        btnAll.addEventListener('click', async function() {
+            const orderId = this.dataset.orderId;
+            const reason = prompt('سبب الاسترداد لكل الأصناف:');
+            if (reason === null) return;
+            const finalReason = (reason || '').trim();
+            if (!finalReason) { alert('الرجاء كتابة سبب الاسترداد.'); return; }
+
+            if (!confirm('هل تريد استرداد جميع الأصناف في هذه الفاتورة؟')) return;
+
+            const fd = new FormData();
+            fd.append('action', 'refund_all');
+            fd.append('order_id', orderId);
+            fd.append('refund_reason', finalReason);
+
+            try {
+                const resp = await fetch('refund_handler.php', { method:'POST', body: fd });
+                const res = await resp.json();
+                if (res.success) {
+                    alert('تم استرداد كل الأصناف بنجاح');
+                    location.reload();
+                } else {
+                    alert('فشل في الاسترداد: ' + (res.error || 'غير معروف'));
+                }
+            } catch (e) {
+                alert('حدث خطأ أثناء الاسترداد');
+            }
+        });
+    }
+
     // Refund button click handler
     document.querySelectorAll('.refund-btn').forEach(btn => {
         btn.addEventListener('click', function() {

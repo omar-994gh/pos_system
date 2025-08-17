@@ -30,7 +30,7 @@ if ($orderId) {
         JOIN Users u ON o.user_id = u.id
         JOIN Items i ON oi.item_id = i.id
         WHERE o.id = ?
-        ORDER BY oi.id
+        ORDER BY oi.item_id
     ");
     $stmt->execute([$orderId]);
     $orderDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);

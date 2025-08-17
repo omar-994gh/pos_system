@@ -18,6 +18,9 @@ $currency         = $settings['currency']          ?? 'SYP';
 $fontSizeTitle    = (int)($settings['font_size_title'] ?? 22);
 $fontSizeItem     = (int)($settings['font_size_item'] ?? 16);
 $fontSizeTotal    = (int)($settings['font_size_total'] ?? 18);
+$fontSizeReportTitle = (int)($settings['font_size_report_title'] ?? 20);
+$fontSizeReportItem  = (int)($settings['font_size_report_item'] ?? 14);
+$fontSizeReportTotal = (int)($settings['font_size_report_total'] ?? 16);
 
 $printFields = [
   'field_item_name_ar',
@@ -93,6 +96,26 @@ foreach ($printFields as $f) { $fieldValues[$f] = (!empty($settings[$f]) && $set
           <label>حجم خط المجاميع</label>
           <input type="number" name="font_size_total" class="form-control" value="<?= htmlspecialchars($fontSizeTotal) ?>">
         </div>
+      </div>
+
+      <h4 class="mt-4">حجم الخط في تقارير الطباعة</h4>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label>حجم عنوان التقرير</label>
+          <input type="number" name="font_size_report_title" class="form-control" value="<?= htmlspecialchars($fontSizeReportTitle) ?>">
+        </div>
+        <div class="col-md-4">
+          <label>حجم عناصر التقرير</label>
+          <input type="number" name="font_size_report_item" class="form-control" value="<?= htmlspecialchars($fontSizeReportItem) ?>">
+        </div>
+        <div class="col-md-4">
+          <label>حجم المجاميع في التقرير</label>
+          <input type="number" name="font_size_report_total" class="form-control" value="<?= htmlspecialchars($fontSizeReportTotal) ?>">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <a href="reset_data.php" class="btn btn-outline-danger">تفريغ البيانات…</a>
       </div>
 
       <div class="mb-3">

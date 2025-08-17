@@ -157,6 +157,13 @@ foreach ([['font_size_title',22], ['font_size_item',16], ['font_size_total',18]]
 		$db->exec("ALTER TABLE System_Settings ADD COLUMN $col INTEGER DEFAULT $def");
 	}
 }
+// New font sizes for report receipts (sales log and summaries)
+foreach ([['font_size_report_title',20], ['font_size_report_item',14], ['font_size_report_total',16]] as $pair) {
+	[$col,$def] = $pair;
+	if (!sqliteColumnExists($db, 'System_Settings', $col)) {
+		$db->exec("ALTER TABLE System_Settings ADD COLUMN $col INTEGER DEFAULT $def");
+	}
+}
 
 // Create authorizations mapping table
 $db->exec(<<<SQL

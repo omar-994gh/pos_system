@@ -20,6 +20,9 @@ $currency   = in_array($_POST['currency'] ?? '', ['SYP','USD','TRY'])
 $fontTitle  = intval($_POST['font_size_title'] ?? 22);
 $fontItem   = intval($_POST['font_size_item'] ?? 16);
 $fontTotal  = intval($_POST['font_size_total'] ?? 18);
+$fsReportTitle = intval($_POST['font_size_report_title'] ?? 20);
+$fsReportItem  = intval($_POST['font_size_report_item'] ?? 14);
+$fsReportTotal = intval($_POST['font_size_report_total'] ?? 16);
 
 // 2. معالجة الشعار
 $imagesDir   = __DIR__ . '/images';
@@ -53,11 +56,11 @@ foreach ($printFields as $f) {
 // 4. تحضير جملة SQL ديناميكيًا
 $sql = "
     INSERT INTO System_Settings
-    (restaurant_name, logo_path, tax_number, address, tax_rate, print_width_mm, currency, font_size_title, font_size_item, font_size_total, "
+    (restaurant_name, logo_path, tax_number, address, tax_rate, print_width_mm, currency, font_size_title, font_size_item, font_size_total, font_size_report_title, font_size_report_item, font_size_report_total, "
     . implode(', ', $printFields) . "
     )
     VALUES
-    (:name, :logo, :tax_no, :addr, :rate, :width, :curr, :fs_title, :fs_item, :fs_total, :"
+    (:name, :logo, :tax_no, :addr, :rate, :width, :curr, :fs_title, :fs_item, :fs_total, :fsr_title, :fsr_item, :fsr_total, :"
     . implode(', :', $printFields) . ")
 ";
 $stmt = $db->prepare($sql);
@@ -74,6 +77,9 @@ $params = [
     ':fs_title' => $fontTitle,
     ':fs_item'  => $fontItem,
     ':fs_total' => $fontTotal,
+    ':fsr_title'=> $fsReportTitle,
+    ':fsr_item' => $fsReportItem,
+    ':fsr_total'=> $fsReportTotal,
 ];
 foreach ($printFields as $f) {
     $params[":$f"] = $printValues[$f];

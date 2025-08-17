@@ -8,36 +8,43 @@ if (!Auth::isAdmin()) { header('Location: dashboard.php'); exit; }
 
 $from = $_GET['date_from'] ?? null;
 $to   = $_GET['date_to']   ?? null;
+$userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+$timeFrom = $_GET['time_from'] ?? '';
+$timeTo   = $_GET['time_to']   ?? '';
 
 $model = new SalesLog($db);
 $summary = $model->summary($from, $to);
 $details = $model->details($from, $to);
+
+$usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <?php include 'header.php'; ?>
 
 <main class="container mt-4">
   <h2>سجل المبيعات</h2>
   <div class="d-flex justify-content-between align-items-center">
-    <form class="row g-2 mb-4">
+    <form method="get" class="row g-2 mb-4">
       <div class="col-auto"><input type="date" name="date_from" class="form-control" value="<?= htmlspecialchars($from) ?>" placeholder="من"></div>
+      <div class="col-auto"><input type="time" name="time_from" class="form-control" value="<?= htmlspecialchars($timeFrom) ?>" placeholder="من"></div>
       <div class="col-auto"><input type="date" name="date_to" class="form-control" value="<?= htmlspecialchars($to) ?>" placeholder="إلى"></div>
+      <div class="col-auto"><input type="time" name="time_to" class="form-control" value="<?= htmlspecialchars($timeTo) ?>" placeholder="إلى"></div>
+      <div class="col-auto">
+        <select name="user_id" class="form-select">
+          <option value="0">كل المستخدمين</option>
+          <?php foreach($usersList as $u): ?>
+            <option value="<?= $u['id'] ?>" <?= $userId===$u['id']?'selected':'' ?>><?= htmlspecialchars($u['username']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
       <div class="col-auto"><button class="btn btn-primary">تصفية</button></div>
     </form>
     <div>
       <a href="summary_groups.php" class="btn btn-outline-success mb-2">ملخص المجموعات</a>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="f_username" checked>
-        <label class="form-check-label" for="f_username">اسم المستخدم</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="f_total" checked>
-        <label class="form-check-label" for="f_total">القيم الإجمالية</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="f_details">
-        <label class="form-check-label" for="f_details">تفاصيل الفواتير</label>
-      </div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_username" checked><label class="form-check-label" for="f_username">اسم المستخدم</label></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_total" checked><label class="form-check-label" for="f_total">القيم الإجمالية</label></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="f_details"><label class="form-check-label" for="f_details">تفاصيل الفواتير</label></div>
       <button id="printSales" class="btn btn-outline-primary mt-2">طباعة كإيصال</button>
+      <button id="exportPDF" class="btn btn-outline-dark mt-2">تصدير PDF</button>
     </div>
   </div>
 
@@ -83,11 +90,13 @@ $details = $model->details($from, $to);
     const wantTotals = document.getElementById('f_total').checked;
     const wantDetails= document.getElementById('f_details').checked;
 
-    const payload = { type:'sales_log', from: '<?= htmlspecialchars($from) ?>', to: '<?= htmlspecialchars($to) ?>', wantUser, wantTotals, wantDetails };
+    const payload = { type:'sales_log', from: '<?= htmlspecialchars($from) ?>', to: '<?= htmlspecialchars($to) ?>', timeFrom: '<?= htmlspecialchars($timeFrom) ?>', timeTo: '<?= htmlspecialchars($timeTo) ?>', userId: '<?= (int)$userId ?>', wantUser, wantTotals, wantDetails };
     const resp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(await buildSalesImage(payload)) });
     const data = await resp.json();
     if (data.success) { if (typeof showToast==='function') showToast('تم إرسال السجل للطباعة'); }
   });
+
+  document.getElementById('exportPDF').addEventListener('click', () => { window.print(); });
 
   async function buildSalesImage(opts) {
     const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');

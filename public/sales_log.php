@@ -24,6 +24,7 @@ $details = $model->details($from, $to);
       <div class="col-auto"><button class="btn btn-primary">تصفية</button></div>
     </form>
     <div>
+      <a href="summary_groups.php" class="btn btn-outline-success mb-2">ملخص المجموعات</a>
       <div class="form-check">
         <input class="form-check-input" type="checkbox" id="f_username" checked>
         <label class="form-check-label" for="f_username">اسم المستخدم</label>
@@ -90,29 +91,56 @@ $details = $model->details($from, $to);
 
   async function buildSalesImage(opts) {
     const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
-    const width = 560; let y = 20; canvas.width = width; canvas.height = 1200;
-    ctx.fillStyle = 'white'; ctx.fillRect(0,0,width,canvas.height); ctx.fillStyle = '#000'; ctx.textAlign='center'; ctx.font = 'bold 20px Arial';
-    ctx.fillText('سجل المبيعات', width/2, y); y += 30;
-    if (opts.from || opts.to) { ctx.font='14px Arial'; ctx.fillText(`من ${opts.from||'-'} إلى ${opts.to||'-'}`, width/2, y); y+=24; }
+    const width = 560; let y = 16; canvas.width = width; canvas.height = 1600;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,width,canvas.height);
 
+    // Header
+    ctx.fillStyle = '#111'; ctx.textAlign='center'; ctx.font = 'bold 22px Arial';
+    ctx.fillText('سجل المبيعات', width/2, y); y+=28;
+    ctx.font = '14px Arial';
+    if (opts.from || opts.to) { ctx.fillText(`من ${opts.from||'-'} إلى ${opts.to||'-'}`, width/2, y); y+=22; }
+    // Separator
+    ctx.strokeStyle='#000'; ctx.beginPath(); ctx.moveTo(12,y); ctx.lineTo(width-12,y); ctx.stroke(); y+=10;
+
+    // Totals row
     <?php $sumTotal = 0; foreach ($details as $o) { $sumTotal += (float)$o['total']; } ?>
     if (opts.wantTotals) {
-      ctx.textAlign='left'; ctx.font='16px Arial'; ctx.fillText('الإجمالي الكلي: <?= number_format($sumTotal,2) ?>', 20, y); y+=24;
+      ctx.textAlign='left'; ctx.font='bold 16px Arial'; ctx.fillText('الإجمالي الكلي', 14, y);
+      ctx.textAlign='right'; ctx.fillText('<?= number_format($sumTotal,2) ?>', width-14, y); y+=24;
     }
+
+    // Summary table
     if (opts.wantUser) {
-      ctx.textAlign='left'; ctx.font='bold 16px Arial'; ctx.fillText('حسب المستخدم:', 20, y); y+=22;
-      ctx.font='14px Arial';
-      <?php foreach ($summary as $row): ?>
-        ctx.fillText('<?= addslashes($row['username']) ?> - عدد: <?= (int)$row['sale_count'] ?> | إجمالي: <?= number_format($row['total_amount'],2) ?>', 20, y); y+=20;
+      const col1=14, col2=width-14; const rowH=22;
+      ctx.textAlign='left'; ctx.font='bold 16px Arial'; ctx.fillText('حسب المستخدم', 14, y); y+=rowH;
+      ctx.font='bold 14px Arial';
+      ctx.fillText('المستخدم', col1, y); ctx.textAlign='right'; ctx.fillText('إجمالي - عدد', col2, y); y+=rowH;
+      ctx.strokeStyle='#ddd'; ctx.beginPath(); ctx.moveTo(12,y-14); ctx.lineTo(width-12,y-14); ctx.stroke();
+      ctx.font='14px Arial'; ctx.textAlign='left';
+      <?php foreach ($summary as $row): $line = addslashes($row['username']); $tot = number_format($row['total_amount'],2); $cnt=(int)$row['sale_count']; ?>
+        ctx.fillText('<?= $line ?>', col1, y);
+        ctx.textAlign='right'; ctx.fillText('<?= $tot ?> - <?= $cnt ?>', col2, y); ctx.textAlign='left'; y+=rowH;
       <?php endforeach; ?>
-      y+=8;
+      y+=6;
     }
+
+    // Detail table
     if (opts.wantDetails) {
-      ctx.textAlign='left'; ctx.font='bold 16px Arial'; ctx.fillText('تفاصيل:', 20, y); y+=22; ctx.font='14px Arial';
-      <?php foreach ($details as $o): ?>
-        ctx.fillText('#<?= (int)$o['order_id'] ?> | <?= addslashes($o['created_at']) ?> | <?= addslashes($o['username']) ?> | <?= number_format($o['total'],2) ?>', 20, y); y+=18;
+      const cDate=14, cUser=200, cTot=width-14; const rowH=20;
+      ctx.textAlign='left'; ctx.font='bold 16px Arial'; ctx.fillText('تفاصيل الفواتير', 14, y); y+=rowH;
+      ctx.font='bold 14px Arial';
+      ctx.fillText('التاريخ', cDate, y); ctx.fillText('المستخدم', cUser, y); ctx.textAlign='right'; ctx.fillText('الإجمالي', cTot, y); y+=rowH;
+      ctx.strokeStyle='#ddd'; ctx.beginPath(); ctx.moveTo(12,y-14); ctx.lineTo(width-12,y-14); ctx.stroke();
+      ctx.font='14px Arial'; ctx.textAlign='left';
+      <?php foreach ($details as $o): $d=addslashes($o['created_at']); $u=addslashes($o['username']); $t=number_format($o['total'],2); ?>
+        ctx.fillText('<?= $d ?>', cDate, y); ctx.fillText('<?= $u ?>', cUser, y); ctx.textAlign='right'; ctx.fillText('<?= $t ?>', cTot, y); ctx.textAlign='left'; y+=rowH;
       <?php endforeach; ?>
     }
+
+    // Footer separator and thank you
+    y+=10; ctx.strokeStyle='#000'; ctx.beginPath(); ctx.moveTo(12,y); ctx.lineTo(width-12,y); ctx.stroke(); y+=20;
+    ctx.textAlign='center'; ctx.font='bold 14px Arial'; ctx.fillText('— نهاية —', width/2, y);
+
     return { images:[{ image: canvas.toDataURL('image/png') }] };
   }
 </script>

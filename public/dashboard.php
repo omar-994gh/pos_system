@@ -100,6 +100,10 @@ $role           = htmlspecialchars($_SESSION['role']);
         <div class="mb-2"><i class="bi bi-receipt-cutoff" style="font-size:2rem;"></i></div>
         <h5>سجل المبيعات</h5>
       </a>
+      <a href="summary_groups.php" class="card card-hover text-center p-3">
+        <div class="mb-2"><i class="bi bi-collection" style="font-size:2rem;"></i></div>
+        <h5>ملخص المجموعات</h5>
+      </a>
     </div>
     <?php else: ?>
     <h2 class="mb-4">لوحة الكاشير</h2>

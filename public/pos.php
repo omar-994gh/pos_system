@@ -279,6 +279,19 @@ document.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('shown.bs.tab', async (event) => { await loadGroup(event.target); });
     tab.addEventListener('click', async (event) => { await loadGroup(event.currentTarget); });
   });
+
+  // Manual fallback activation in case Bootstrap events don’t switch panes
+  document.getElementById('groupTabs').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button.nav-link');
+    if (!btn) return;
+    e.preventDefault();
+    document.querySelectorAll('#groupTabs .nav-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const targetSel = btn.getAttribute('data-bs-target');
+    document.querySelectorAll('.tab-content .tab-pane').forEach(p => p.classList.remove('show','active'));
+    const pane = document.querySelector(targetSel);
+    if (pane) { pane.classList.add('show','active'); await loadGroup(btn); }
+  });
 });
 </script>
 </body>

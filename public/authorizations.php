@@ -24,14 +24,14 @@ $userModel = new User($db);
 $users = $userModel->all();
 $currentUserId = (int)($_GET['user_id'] ?? ($users[0]['id'] ?? 0));
 $availableElements = [
-	'btn_add_item' => 'Add Item Button',
-	'btn_delete_item' => 'Delete Item Button',
-	'btn_checkout' => 'Checkout Button',
-	'nav_settings' => 'Settings Navigation',
-	'nav_users' => 'Users Navigation',
-	'nav_warehouse' => 'Warehouse Navigation',
-	'input_edit_price' => 'Edit Price Input',
-	'input_discount' => 'Discount Input',
+	'btn_add_item' => 'إضافة عنصر',
+	'btn_delete_item' => 'حذف عنصر',
+	'btn_checkout' => 'المبيع',
+	'nav_settings' => 'الإعدادات',
+	'nav_users' => 'المستخدمون',
+	'nav_warehouse' => 'المستودعات',
+	'input_edit_price' => 'مربع تعديل الأسعار الفوري',
+	'input_discount' => 'مربع إضافة خصم',
 ];
 
 $existing = [];
@@ -54,14 +54,16 @@ include 'header.php';
     </select>
   </form>
 
-  <form method="post">
+  <hr>
+  <form method="post" class="pt-4">
+    <label class="mb-3">اختر الصلاحيات المناسبة:</label>
     <input type="hidden" name="user_id" value="<?= $currentUserId ?>">
     <div class="row g-3">
       <?php foreach($availableElements as $key => $label): ?>
       <div class="col-md-4">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" name="elements[<?= $key ?>]" id="<?= $key ?>" value="1" <?= in_array($key, $existing)?'checked':'' ?>>
-          <label class="form-check-label" for="<?= $key ?>"><?= htmlspecialchars($label) ?></label>
+          <label class="form-check-label pr-3" for="<?= $key ?>"><?= htmlspecialchars($label) ?></label>
         </div>
       </div>
       <?php endforeach; ?>

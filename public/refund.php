@@ -30,7 +30,7 @@ if ($orderId) {
         JOIN Users u ON o.user_id = u.id
         JOIN Items i ON oi.item_id = i.id
         WHERE o.id = ?
-        ORDER BY oi.id
+        ORDER BY oi.order_id
     ");
     $stmt->execute([$orderId]);
     $orderDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -184,7 +184,7 @@ include 'header.php';
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">استرداد الصنف</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal">X</button>
             </div>
             <div class="modal-body">
                 <form id="refundForm">
@@ -213,51 +213,52 @@ include 'header.php';
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <!-- <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button> -->
                 <button type="button" class="btn btn-warning" id="confirmRefund">تأكيد الاسترداد</button>
             </div>
         </div>
     </div>
 </div>
 
+<script src="../assets/jquery.min.js"></script>
 <script src="../assets/bootstrap.bundle.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Refund button click handler
-    document.querySelectorAll('.refund-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const itemId = this.dataset.itemId;
-            const orderId = this.dataset.orderId;
-            const quantity = this.dataset.quantity;
-            const unitPrice = this.dataset.unitPrice;
-            const itemName = this.dataset.itemName;
-            
-            document.getElementById('refundItemId').value = itemId;
-            document.getElementById('refundOrderId').value = orderId;
-            document.getElementById('refundItemName').value = itemName;
-            document.getElementById('refundQuantity').value = quantity;
-            document.getElementById('refundAmount').max = quantity;
-            document.getElementById('refundAmount').value = 1;
-            document.getElementById('refundReason').value = '';
-            
-            const modal = new bootstrap.Modal(document.getElementById('refundModal'));
-            modal.show();
-        });
+document.addEventListener('DOMContentLoaded', function () {
+    // 1) أنشئ instance واحد فقط للـModal
+    const refundModalEl = document.getElementById('refundModal');
+    const refundForm = document.getElementById('refundForm');
+    const refundModal = new bootstrap.Modal(refundModalEl);
+
+    // 2) افتح المودال عبر تفويض الأحداث (يعمل حتى لو الصفوف اتحدثت ديناميكياً)
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.refund-btn');
+        if (!btn) return;
+
+        const ds = btn.dataset;
+        document.getElementById('refundItemId').value = ds.itemId;
+        document.getElementById('refundOrderId').value = ds.orderId;
+        document.getElementById('refundItemName').value = ds.itemName;
+        document.getElementById('refundQuantity').value = ds.quantity;
+        document.getElementById('refundAmount').max = ds.quantity;
+        document.getElementById('refundAmount').value = 1;
+        document.getElementById('refundReason').value = '';
+
+        refundModal.show();
     });
-    
-    // Confirm refund
-    document.getElementById('confirmRefund').addEventListener('click', async function() {
-        const formData = new FormData(document.getElementById('refundForm'));
-        
+
+    // 3) تأكيد الاسترداد
+    document.getElementById('confirmRefund').addEventListener('click', async function () {
+        const formData = new FormData(refundForm);
+
         try {
             const response = await fetch('refund_handler.php', {
                 method: 'POST',
                 body: formData
             });
-            
             const result = await response.json();
-            
+
             if (result.success) {
+                refundModal.hide();
                 alert('تم الاسترداد بنجاح');
                 location.reload();
             } else {
@@ -266,9 +267,23 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             alert('حدث خطأ أثناء الاسترداد');
         }
-        
-        const modal = bootstrap.Modal.getInstance(document.getElementById('refundModal'));
-        modal.hide();
+    });
+
+    // 4) زر الإلغاء: نعتمد على data-bs-dismiss + Fallback إخفاء يدوي
+    const cancelBtn = refundModalEl.querySelector('[data-bs-dismiss="modal"]');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+            // Fallback في حال تعارض يمنع Bootstrap من الالتقاط
+            refundModal.hide();
+        });
+    }
+
+    // 5) صفّر النموذج عند إغلاق المودال حتى يفتح نظيف في كل مرة
+    refundModalEl.addEventListener('hidden.bs.modal', function () {
+        refundForm.reset();
+        document.getElementById('refundItemId').value = '';
+        document.getElementById('refundOrderId').value = '';
+        document.getElementById('refundAmount').removeAttribute('max');
     });
 });
 </script>

@@ -80,6 +80,9 @@ include 'header.php';
                 <p class="mb-0">المجموع: <?= number_format($orderDetails[0]['order_total'], 2) ?></p>
             </div>
             <div class="card-body">
+                <div class="mb-3 text-start">
+                    <button type="button" class="btn btn-danger" id="refundAllBtn" data-order-id="<?= $orderId ?>">استرداد كل الأصناف</button>
+                </div>
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -223,27 +226,59 @@ include 'header.php';
 <script src="../assets/jquery.min.js"></script>
 <script src="../assets/bootstrap.bundle.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    // 1) أنشئ instance واحد فقط للـModal
-    const refundModalEl = document.getElementById('refundModal');
-    const refundForm = document.getElementById('refundForm');
-    const refundModal = new bootstrap.Modal(refundModalEl);
+document.addEventListener('DOMContentLoaded', function() {
+    // Refund ALL items button
+    const btnAll = document.getElementById('refundAllBtn');
+    if (btnAll) {
+        btnAll.addEventListener('click', async function() {
+            const orderId = this.dataset.orderId;
+            const reason = prompt('سبب الاسترداد لكل الأصناف:');
+            if (reason === null) return;
+            const finalReason = (reason || '').trim();
+            if (!finalReason) { alert('الرجاء كتابة سبب الاسترداد.'); return; }
 
-    // 2) افتح المودال عبر تفويض الأحداث (يعمل حتى لو الصفوف اتحدثت ديناميكياً)
-    document.addEventListener('click', function (e) {
-        const btn = e.target.closest('.refund-btn');
-        if (!btn) return;
+            if (!confirm('هل تريد استرداد جميع الأصناف في هذه الفاتورة؟')) return;
 
-        const ds = btn.dataset;
-        document.getElementById('refundItemId').value = ds.itemId;
-        document.getElementById('refundOrderId').value = ds.orderId;
-        document.getElementById('refundItemName').value = ds.itemName;
-        document.getElementById('refundQuantity').value = ds.quantity;
-        document.getElementById('refundAmount').max = ds.quantity;
-        document.getElementById('refundAmount').value = 1;
-        document.getElementById('refundReason').value = '';
+            const fd = new FormData();
+            fd.append('action', 'refund_all');
+            fd.append('order_id', orderId);
+            fd.append('refund_reason', finalReason);
 
-        refundModal.show();
+            try {
+                const resp = await fetch('refund_handler.php', { method:'POST', body: fd });
+                const res = await resp.json();
+                if (res.success) {
+                    alert('تم استرداد كل الأصناف بنجاح');
+                    location.reload();
+                } else {
+                    alert('فشل في الاسترداد: ' + (res.error || 'غير معروف'));
+                }
+            } catch (e) {
+                alert('حدث خطأ أثناء الاسترداد');
+            }
+        });
+    }
+
+    // Refund button click handler
+    document.querySelectorAll('.refund-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            const orderId = this.dataset.orderId;
+            const quantity = this.dataset.quantity;
+            const unitPrice = this.dataset.unitPrice;
+            const itemName = this.dataset.itemName;
+            
+            document.getElementById('refundItemId').value = itemId;
+            document.getElementById('refundOrderId').value = orderId;
+            document.getElementById('refundItemName').value = itemName;
+            document.getElementById('refundQuantity').value = quantity;
+            document.getElementById('refundAmount').max = quantity;
+            document.getElementById('refundAmount').value = 1;
+            document.getElementById('refundReason').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('refundModal'));
+            modal.show();
+        });
     });
 
     // 3) تأكيد الاسترداد

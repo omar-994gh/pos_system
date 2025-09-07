@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
 
             if (result.success) {
-                refundModal.hide();
+                // refundModal.hide();
                 alert('تم الاسترداد بنجاح');
                 location.reload();
             } else {

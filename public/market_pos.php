@@ -158,44 +158,50 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('discountInput').addEventListener('input', renderCart);
 
   document.getElementById('checkoutBtn').addEventListener('click', async () => {
-    if (!cart.length) return toastErr('السلة فارغة');
-    const subTotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-    const taxAmount = subTotal * taxRate / 100;
-    const discount = Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0);
-    const total = subTotal + taxAmount - discount;
+    if (!cart.length) return toastErr('السلة فارغة');
+    const subTotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+    const taxAmount = subTotal * taxRate / 100;
+    const discount = Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0);
+    const total = subTotal + taxAmount - discount;
 
-    const resp = await fetch('pos_handler.php', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ items: cart, total }) });
-    const result = await resp.json();
-    if (!result.success) return toastErr('فشل في إنشاء الطلب');
+    const resp = await fetch('pos_handler.php', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ items: cart, total }) });
+    const result = await resp.json();
+    if (!result.success) return toastErr('فشل في إنشاء الطلب');
+    
+    // ***** تم إفراغ السلة بعد تسجيل الطلب وقبل الطباعة *****
+    toastOk('تم إنشاء الطلب بنجاح');
+    // *********************************************************
 
-    const itemsByGroup = {}; cart.forEach(it => { const gid = parseInt(it.group_id || 0); if (!itemsByGroup[gid]) itemsByGroup[gid] = []; itemsByGroup[gid].push(it); });
-    const groupPrinters = result.groupPrinters || {}; const unassignedPrinters = result.unassignedPrinters || [];
+    const itemsByGroup = {}; cart.forEach(it => { const gid = parseInt(it.group_id || 0); if (!itemsByGroup[gid]) itemsByGroup[gid] = []; itemsByGroup[gid].push(it); });
+    const groupPrinters = result.groupPrinters || {}; const unassignedPrinters = result.unassignedPrinters || [];
 
-    const images = [];
-    for (const [gidStr, items] of Object.entries(itemsByGroup)) {
-      const gid = parseInt(gidStr);
-      const printerId = parseInt(groupPrinters[gid] || 0);
-      const img = await generateInvoiceImage(items, subTotal, taxAmount, total, result.orderSeq, fsTitle, fsItem, fsTotal);
-      images.push({ image: img, printer_ids: printerId ? [printerId] : [] });
-    }
-    if (unassignedPrinters.length) {
-      const fullImg = await generateInvoiceImage(cart, subTotal, taxAmount, total, result.orderSeq, fsTitle, fsItem, fsTotal);
-      images.push({ image: fullImg, printer_ids: unassignedPrinters });
-    }
+    const images = [];
+    for (const [gidStr, items] of Object.entries(itemsByGroup)) {
+      const gid = parseInt(gidStr);
+      const printerId = parseInt(groupPrinters[gid] || 0);
+      
+      // ***** الشرط الجديد: لا يتم توليد فاتورة مفصلة إلا للمجموعات ذات الطابعات المخصصة *****
+      if (printerId) {
+        const img = await generateInvoiceImage(items, subTotal, taxAmount, total, result.orderSeq, fsTitle, fsItem, fsTotal);
+        images.push({ image: img, printer_ids: [printerId] });
+      }
+    }
+    if (unassignedPrinters.length) {
+      const fullImg = await generateInvoiceImage(cart, subTotal, taxAmount, total, result.orderSeq, fsTitle, fsItem, fsTotal);
+      images.push({ image: fullImg, printer_ids: unassignedPrinters });
+    }
 
-    const printResp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ images, order_id: result.orderId }) });
-    const printResult = await printResp.json();
-    if (printResult.success) { 
-      toastOk('تم البيع وطباعة الفاتورة'); 
-      cart.length = 0; 
-      renderCart(); 
-    } else { 
-      toastErr('تم البيع ولكن فشلت الطباعة'); 
-      // Clear cart and show error message even when printing fails
-      cart.length = 0; 
-      renderCart(); 
-    }
-  });
+    const printResp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ images, order_id: result.orderId }) });
+    const printResult = await printResp.json();
+    
+    cart.length = 0;
+    renderCart();
+    if (printResult.success) { 
+      toastOk('تم الطباعة بنجاح'); 
+    } else { 
+      toastErr('تم البيع ولكن فشلت الطباعة'); 
+    }
+  });
 
   // Guard add-to-cart clicks for zero stock (in case of future UI entrypoints)
   document.addEventListener('click', e => {

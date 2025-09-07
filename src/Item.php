@@ -93,9 +93,10 @@ class Item
 
     public function allWithStockAndGroup(): array {
         $stmt = $this->db->query("
-            SELECT i.id, i.name_ar, i.name_en, i.stock, i.unit, g.name AS group_name
+            SELECT i.id, i.name_ar, i.name_en, i.stock, i.unit, i.price, g.name AS group_name, whi.unit_price
             FROM Items i
             LEFT JOIN Groups g ON g.id = i.group_id
+			LEFT JOIN Warehouse_Invoice_Items whi ON i.id = whi.item_id
             ORDER BY i.name_ar
         ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

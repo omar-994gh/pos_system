@@ -97,6 +97,7 @@ foreach ($images as $imgSpec) {
 			$printer = new Printer($conn);
 			$imgObj = EscposImage::load($temp);
 			$printer->bitImage($imgObj);
+			$printer->pulse();
 			$printer->cut();
 			$printer->close();
 		} catch (Exception $e) {

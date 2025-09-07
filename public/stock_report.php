@@ -49,8 +49,8 @@ $items = $itemModel->allWithStockAndGroup();
           <th>المجموعة</th>
           <th>الكمية المتوفرة</th>
           <th>الوحدة</th>
-          <th>السعر</th>
-          <th>السعر الإجمالي</th>
+          <th>سعر الكلفة</th>
+          <th>سعر المبيع</th>
         </tr>
       </thead>
       <tbody>
@@ -61,8 +61,8 @@ $items = $itemModel->allWithStockAndGroup();
             <td><?= htmlspecialchars($it['group_name']) ?></td>
             <td><?= $it['stock'] ?></td>
             <td><?= htmlspecialchars($it['unit']) ?></td>
+            <td><?= number_format((float)($it['unit_price'] ?? 0), 2) ?></td>
             <td><?= number_format((float)($it['price'] ?? 0), 2) ?></td>
-            <td><?= number_format($net, 2) ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>

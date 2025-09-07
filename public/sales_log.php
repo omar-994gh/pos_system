@@ -1,20 +1,61 @@
 <?php
+// تضمين الملفات الأساسية
 require_once __DIR__ . '/../src/init.php';
 require_once __DIR__ . '/../src/Auth.php';
-require_once __DIR__ . '/../src/SalesLog.php';
 
 Auth::requireLogin();
 if (!Auth::isAdmin()) { header('Location: dashboard.php'); exit; }
 
-$from = $_GET['date_from'] ?? null;
-$to   = $_GET['date_to']   ?? null;
+/**
+ * كلاس SalesLog لإدارة تقارير المبيعات
+ * تم تعديل الدوال لقبول معايير الفلترة الجديدة
+ */
+class SalesLog {
+    private $db;
+    public function __construct($db) { $this->db = $db; }
+
+    public function summary($from, $to, $userId = 0, $timeFrom = '', $timeTo = '') {
+        $sql = "SELECT u.username, COUNT(o.id) as sale_count, SUM(o.total) as total_amount, AVG(o.total) as avg_amount
+                FROM Orders o JOIN Users u ON u.id = o.user_id
+                WHERE DATE(o.created_at) BETWEEN :from AND :to ";
+        if ($userId > 0) { $sql .= " AND o.user_id = :uid"; }
+        if ($timeFrom !== '' && $timeTo !== '') { $sql .= " AND TIME(o.created_at) BETWEEN :tfrom AND :tto"; }
+        $sql .= " GROUP BY u.username ORDER BY u.username";
+
+        $stmt = $this->db->prepare($sql);
+        $params = [':from' => $from, ':to' => $to];
+        if ($userId > 0) { $params[':uid'] = $userId; }
+        if ($timeFrom !== '' && $timeTo !== '') { $params[':tfrom'] = $timeFrom; $params[':tto'] = $timeTo; }
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function details($from, $to, $userId = 0, $timeFrom = '', $timeTo = '') {
+        $sql = "SELECT o.id as order_id, o.created_at, u.username, o.total FROM Orders o JOIN Users u ON u.id = o.user_id
+                WHERE DATE(o.created_at) BETWEEN :from AND :to ";
+        if ($userId > 0) { $sql .= " AND o.user_id = :uid"; }
+        if ($timeFrom !== '' && $timeTo !== '') { $sql .= " AND TIME(o.created_at) BETWEEN :tfrom AND :tto"; }
+        $sql .= " ORDER BY o.created_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $params = [':from' => $from, ':to' => $to];
+        if ($userId > 0) { $params[':uid'] = $userId; }
+        if ($timeFrom !== '' && $timeTo !== '') { $params[':tfrom'] = $timeFrom; $params[':tto'] = $timeTo; }
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+$from = $_GET['date_from'] ?? date('Y-m-d');
+$to = $_GET['date_to'] ?? date('Y-m-d');
 $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
 $timeFrom = $_GET['time_from'] ?? '';
-$timeTo   = $_GET['time_to']   ?? '';
+$timeTo = $_GET['time_to'] ?? '';
 
 $model = new SalesLog($db);
-$summary = $model->summary($from, $to);
-$details = $model->details($from, $to);
+// تم تعديل الاستدعاء لتمرير جميع متغيرات الفلترة
+$summary = $model->summary($from, $to, $userId, $timeFrom, $timeTo);
+$details = $model->details($from, $to, $userId, $timeFrom, $timeTo);
 
 $usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -39,7 +80,6 @@ $usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fet
       <div class="col-auto mt-3"><button class="btn btn-primary">تصفية</button></div>
     </form>
     <div>
-      <!-- <a href="summary_groups.php" class="btn btn-outline-success mb-2">ملخص المجموعات</a> -->
       <div class="form-check"><input class="form-check-input" type="checkbox" id="f_username" checked><label class="form-check-label pr-4" for="f_username">اسم المستخدم</label></div>
       <div class="form-check"><input class="form-check-input" type="checkbox" id="f_total" checked><label class="form-check-label pr-4" for="f_total">القيم الإجمالية</label></div>
       <div class="form-check"><input class="form-check-input" type="checkbox" id="f_details"><label class="form-check-label pr-4" for="f_details">تفاصيل الفواتير</label></div>
@@ -87,12 +127,12 @@ $usersList = $db->query("SELECT id, username FROM Users ORDER BY username")->fet
 </main>
 <script>
   document.getElementById('printSales').addEventListener('click', async () => {
-    const wantUser   = document.getElementById('f_username').checked;
+    const wantUser   = document.getElementById('f_username').checked;
     const wantTotals = document.getElementById('f_total').checked;
     const wantDetails= document.getElementById('f_details').checked;
 
-    const payload = { type:'sales_log', from: '<?= htmlspecialchars($from) ?>', to: '<?= htmlspecialchars($to) ?>', timeFrom: '<?= htmlspecialchars($timeFrom) ?>', timeTo: '<?= htmlspecialchars($timeTo) ?>', userId: '<?= (int)$userId ?>', wantUser, wantTotals, wantDetails };
-    const resp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(await buildSalesImage(payload)) });
+    const payload = await buildSalesImage({ from: '<?= htmlspecialchars($from) ?>', to: '<?= htmlspecialchars($to) ?>', timeFrom: '<?= htmlspecialchars($timeFrom) ?>', timeTo: '<?= htmlspecialchars($timeTo) ?>', userId: '<?= (int)$userId ?>', wantUser, wantTotals, wantDetails });
+    const resp = await fetch('../src/print.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     const data = await resp.json();
     if (data.success) { if (typeof showToast==='function') showToast('تم إرسال السجل للطباعة'); }
   });

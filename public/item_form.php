@@ -56,8 +56,11 @@ $groupId = $isEdit
 
   <div class="mb-3">
     <label>باركود</label>
-    <input type="text" name="barcode" class="form-control"
-           value="<?= $isEdit ? htmlspecialchars($item['barcode']) : '' ?>">
+    <div class="input-group">
+      <input type="text" id="barcodeField" name="barcode" class="form-control"
+            value="<?= $isEdit ? htmlspecialchars($item['barcode']) : '' ?>">
+      <button type="button" id="generateBarcode" class="btn btn-outline-secondary">توليد باركود</button>
+    </div>
   </div>
 
   <div class="mb-3">
@@ -86,5 +89,6 @@ $groupId = $isEdit
 
 </main>
 <script src="../assets/bootstrap.min.js"></script>
+<script src="js/add_item.js"></script>
 </body>
 </html>
